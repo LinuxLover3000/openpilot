@@ -96,149 +96,6 @@ class NAPLayout(Widget):
     self._all_items = []
     self._toggle_map = {}  # param_key -> ListItem (for refresh)
 
-    # ── Section 1: Longitudinal Control ──
-    self._all_items.append(section_header_item("Longitudinal Control"))
-
-    self._add_toggle(
-      NAPParamKeys.PEDAL_ENABLED,
-      "Pedal Interceptor",
-      "Enable Comma Pedal hardware for direct throttle control. Requires reboot.",
-      enabled=ui_state.is_offroad,
-      needs_reboot=True,
-    )
-
-    self._add_toggle(
-      NAPParamKeys.ADAPTIVE_ACCEL,
-      "Adaptive Accel Limits",
-      "Reduces acceleration authority when close to a lead car to prevent overshoot. Full accel on open road or when closing a large gap.",
-    )
-
-    follow_dist = self._params.get(NAPParamKeys.FOLLOW_DISTANCE, return_default=True)
-    self._follow_buttons = multiple_button_item(
-      "Follow Distance",
-      "Follow distance (1=closest, 7=farthest). Overridden by cruise stalk if present.",
-      buttons=["1", "2", "3", "4", "5", "6", "7"],
-      button_width=80,
-      selected_index=max(0, min(6, follow_dist - 1)),
-      callback=self._on_follow_distance,
-    )
-    self._all_items.append(self._follow_buttons)
-
-    # ── Section 2: Pedal Hardware ──
-    self._all_items.append(section_header_item("Pedal Hardware"))
-
-
-    pedal_bus = self._params.get(NAPParamKeys.PEDAL_CAN_BUS, return_default=True)
-    self._pedal_bus_buttons = multiple_button_item(
-      "Pedal CAN Bus",
-      "Select which CAN bus the Comma Pedal is connected to. Requires reboot.",
-      buttons=["Bus 0", "Bus 2"],
-      button_width=150,
-      selected_index=0 if pedal_bus == 0 else 1,
-      callback=self._on_pedal_can_bus,
-    )
-    self._pedal_bus_buttons.action_item.set_enabled(ui_state.is_offroad)
-    self._all_items.append(self._pedal_bus_buttons)
-
-    self._pedal_calib_status = text_item(
-      "Pedal Calibration",
-      lambda: "Calibrated" if self._params.get_bool(NAPParamKeys.PEDAL_CALIB_DONE) else "Not Calibrated",
-      description="Shows whether the pedal interceptor has been calibrated.",
-    )
-    self._all_items.append(self._pedal_calib_status)
-
-    self._calibrate_pedal_btn = button_item(
-      "Calibrate Pedal",
-      "Start",
-      description="Run the pedal calibration routine. Vehicle must be stationary with ignition on.",
-      callback=self._on_calibrate_pedal,
-    )
-    self._calibrate_pedal_btn.action_item.set_enabled(ui_state.is_offroad)
-    self._all_items.append(self._calibrate_pedal_btn)
-
-    # ── Section 3: Radar ──
-    self._all_items.append(section_header_item("Radar"))
-
-    self._add_toggle(
-      NAPParamKeys.RADAR_ENABLED,
-      "Radar Enabled",
-      "Enable the stock Bosch radar for lead car detection. Requires reboot.",
-      enabled=ui_state.is_offroad,
-      needs_reboot=True,
-    )
-
-    self._add_toggle(
-      NAPParamKeys.RADAR_BEHIND_NOSECONE,
-      "Radar Behind Nosecone",
-      "Apply signal attenuation adjustment for radar mounted behind the nosecone. Requires reboot.",
-      enabled=ui_state.is_offroad,
-      needs_reboot=True,
-    )
-
-    self._radar_offset_keyboard = Keyboard(max_text_size=10)
-    self._radar_offset_btn = button_item(
-      "Radar Lateral Offset",
-      self._get_radar_offset_text,
-      description=(
-        "Lateral offset in meters added to radar yRel. Negative shifts leads toward the left of current radar "
-        + "reading; positive shifts right. Example: -0.27 for the 3D-printed factory-location mount."
-      ),
-      callback=self._on_radar_offset_click,
-    )
-    self._all_items.append(self._radar_offset_btn)
-
-    self._calibrate_radar_btn = button_item(
-      "Calibrate Radar",
-      "Start",
-      description="Run the radar calibration routine.",
-      callback=self._on_calibrate_radar,
-    )
-    self._calibrate_radar_btn.action_item.set_enabled(ui_state.is_offroad)
-    self._all_items.append(self._calibrate_radar_btn)
-
-    self._test_radar_btn = button_item(
-      "Test Radar",
-      "Test",
-      description="Test radar connectivity and verify signals.",
-      callback=self._on_test_radar,
-    )
-    self._test_radar_btn.action_item.set_enabled(ui_state.is_offroad)
-    self._all_items.append(self._test_radar_btn)
-
-    # ── Section 4: iBooster / Braking (not yet implemented — grayed out) ──
-    self._all_items.append(section_header_item("iBooster / Braking"))
-
-    self._add_toggle(
-      NAPParamKeys.IBOOSTER_ENABLED,
-      "iBooster Enabled",
-      "Enable the iBooster brake-by-wire system for electronic braking. (Not yet implemented)",
-      enabled=False,
-    )
-
-    brake_factor = self._params.get(NAPParamKeys.BRAKE_FACTOR, return_default=True)
-    self._brake_factor_buttons = multiple_button_item(
-      "Brake Factor",
-      "Multiplier for brake force. Higher values brake more aggressively. (Not yet implemented)",
-      buttons=["0.5x", "1.0x", "1.5x", "2.0x"],
-      button_width=130,
-      selected_index=find_preset_index(BRAKE_FACTOR_PRESETS, brake_factor),
-      callback=self._on_brake_factor,
-    )
-    self._brake_factor_buttons.action_item.set_enabled(False)
-    self._all_items.append(self._brake_factor_buttons)
-
-    # ── Section 5: Advanced ──
-    self._all_items.append(section_header_item("Advanced"))
-
-    # Force Pre-AP is always on for now — grayed out in the ON position
-    self._params.put_bool(NAPParamKeys.FORCE_PRE_AP, True)
-    self._add_toggle(
-      NAPParamKeys.FORCE_PRE_AP,
-      "Force Pre-AP Mode",
-      "Force the system to treat this vehicle as a Pre-Autopilot Tesla.",
-      enabled=False,
-    )
-
     # ── Section 6: Actions ──
     self._all_items.append(section_header_item("Actions"))
 
@@ -312,55 +169,6 @@ class NAPLayout(Widget):
     self._toggle_map[param_key] = item
     self._all_items.append(item)
 
-  # ── Multiple-button callbacks ──
-
-  def _on_follow_distance(self, index: int):
-    self._params.put(NAPParamKeys.FOLLOW_DISTANCE, index + 1)
-
-  def _on_pedal_can_bus(self, index: int):
-    self._params.put(NAPParamKeys.PEDAL_CAN_BUS, PEDAL_CAN_BUS_VALUES[index])
-    self._show_reboot_modal()
-
-  def _on_brake_factor(self, index: int):
-    self._params.put(NAPParamKeys.BRAKE_FACTOR, BRAKE_FACTOR_PRESETS[index])
-
-  def _get_radar_offset(self) -> float:
-    raw = self._params.get(NAPParamKeys.RADAR_OFFSET, return_default=True)
-    try:
-      return float(raw) if raw is not None else 0.0
-    except (TypeError, ValueError):
-      return 0.0
-
-  def _get_radar_offset_text(self) -> str:
-    return f"{self._get_radar_offset():+.2f}m"
-
-  def _on_radar_offset_click(self):
-    self._radar_offset_keyboard.reset(min_text_size=1)
-    self._radar_offset_keyboard.set_title("Radar Lateral Offset (m)")
-    self._radar_offset_keyboard.set_text(f"{self._get_radar_offset():.2f}")
-    self._radar_offset_keyboard.set_callback(self._on_radar_offset_submit)
-    gui_app.push_widget(self._radar_offset_keyboard)
-
-  def _on_radar_offset_submit(self, result: DialogResult):
-    if result != DialogResult.CONFIRM:
-      return
-    try:
-      text = (self._radar_offset_keyboard.text or "").strip()
-      value = float(text)
-    except (TypeError, ValueError, AttributeError):
-      return  # silently reject blank/non-numeric input; label stays at prior value
-    value = max(RADAR_OFFSET_MIN, min(RADAR_OFFSET_MAX, value))
-    # Pass raw float (matches the BRAKE_FACTOR put pattern). Params
-    # previously got str(value) which threw inside Params for FLOAT-typed
-    # keys; exception propagated out of the Keyboard Enter callback,
-    # crashing the UI and leaving the Params value unset (label stuck at
-    # the 0.0 default). Keep the try/except so no future value ever kills
-    # the UI.
-    try:
-      self._params.put(NAPParamKeys.RADAR_OFFSET, value)
-    except Exception:
-      pass
-
   # ── Script runner ──
 
   def _show_script_runner(self, title: str, instructions: str, script_module: str):
@@ -384,20 +192,6 @@ class NAPLayout(Widget):
       title="Pedal Calibration",
       instructions=CALIBRATE_PEDAL_INSTRUCTIONS,
       script_module="scripts.nap.calibrate_pedal",
-    )
-
-  def _on_calibrate_radar(self):
-    self._show_script_runner(
-      title="Radar Calibration",
-      instructions=CALIBRATE_RADAR_INSTRUCTIONS,
-      script_module="scripts.nap.calibrate_radar",
-    )
-
-  def _on_test_radar(self):
-    self._show_script_runner(
-      title="Radar Test",
-      instructions=TEST_RADAR_INSTRUCTIONS,
-      script_module="scripts.nap.test_radar",
     )
 
   def _on_flash_epas(self):
@@ -485,16 +279,3 @@ class NAPLayout(Widget):
     """Sync all toggle states from params (handles external changes)."""
     for key, item in self._toggle_map.items():
       item.action_item.set_state(self._params.get_bool(key))
-
-    # Refresh multiple-button selections
-    follow_dist = self._params.get(NAPParamKeys.FOLLOW_DISTANCE, return_default=True)
-    self._follow_buttons.action_item.set_selected_button(
-      max(0, min(6, follow_dist - 1)))
-
-    pedal_bus = self._params.get(NAPParamKeys.PEDAL_CAN_BUS, return_default=True)
-    self._pedal_bus_buttons.action_item.set_selected_button(
-      0 if pedal_bus == 0 else 1)
-
-    brake_factor = self._params.get(NAPParamKeys.BRAKE_FACTOR, return_default=True)
-    self._brake_factor_buttons.action_item.set_selected_button(
-      find_preset_index(BRAKE_FACTOR_PRESETS, brake_factor))
