@@ -60,10 +60,10 @@ class SettingsLayout(Widget):
     self._panels = {
       PanelType.DEVICE: PanelInfo(tr_noop("Device"), DeviceLayout()),
       PanelType.NETWORK: PanelInfo(tr_noop("Network"), NetworkUI(wifi_manager)),
-      PanelType.TOGGLES: PanelInfo(tr_noop("Toggles"), TogglesLayout()),
+      PanelType.TOGGLES: PanelInfo(tr_noop("Preferences"), TogglesLayout()),
       PanelType.SOFTWARE: PanelInfo(tr_noop("Software"), SoftwareLayout()),
-      PanelType.NAP: PanelInfo(tr_noop("NAP"), NAPLayout()),
-      PanelType.FIREHOSE: PanelInfo(tr_noop("Firehose"), FirehoseLayout()),
+      PanelType.NAP: PanelInfo(tr_noop("Steering"), NAPLayout()),
+      PanelType.FIREHOSE: PanelInfo(tr_noop("Data"), FirehoseLayout()),
       PanelType.DEVELOPER: PanelInfo(tr_noop("Developer"), DeveloperLayout()),
     }
 
