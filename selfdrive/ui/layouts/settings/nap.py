@@ -4,10 +4,8 @@ import pyray as rl
 from openpilot.common.params import Params
 from openpilot.common.basedir import BASEDIR
 from openpilot.system.ui.widgets import Widget, DialogResult
-from openpilot.system.ui.widgets.keyboard import Keyboard
 from openpilot.system.ui.widgets.list_view import (
-  toggle_item, multiple_button_item, button_item, text_item,
-  ITEM_PADDING,
+  toggle_item, button_item, ITEM_PADDING,
 )
 from openpilot.system.ui.widgets.scroller_tici import Scroller
 from openpilot.system.ui.widgets.confirm_dialog import ConfirmDialog
@@ -15,12 +13,11 @@ from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 from openpilot.system.ui.widgets.html_render import HtmlRenderer, ElementType
 from openpilot.selfdrive.ui.layouts.settings.nap_content import (
-  BACKUP_EPAS_INSTRUCTIONS, BRAKE_FACTOR_PRESETS,
-  CALIBRATE_PEDAL_INSTRUCTIONS, CALIBRATE_RADAR_INSTRUCTIONS,
-  FLASH_EPAS_INSTRUCTIONS, PEDAL_CAN_BUS_VALUES,
-  RADAR_OFFSET_MAX, RADAR_OFFSET_MIN,
-  RESTORE_EPAS_INSTRUCTIONS, TEST_RADAR_INSTRUCTIONS,
-  acknowledgments_html, find_preset_index,
+  BACKUP_EPAS_INSTRUCTIONS,
+  CALIBRATE_PEDAL_INSTRUCTIONS,
+  FLASH_EPAS_INSTRUCTIONS,
+  RESTORE_EPAS_INSTRUCTIONS,
+  acknowledgments_html,
 )
 from opendbc.car.tesla.preap.nap_params import NAPParamKeys, DEFAULTS
 from openpilot.selfdrive.ui.ui_state import ui_state
