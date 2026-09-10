@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+from openpilot.common.swaglog import cloudlog
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.lib.application import gui_app
@@ -129,6 +130,7 @@ class SoftwareLayout(Widget):
 
       # If we've been waiting too long without a state change, reset state
       if self._waiting_for_updater and (time.monotonic() - self._waiting_start_ts > UPDATED_TIMEOUT):
+        cloudlog.info("software: Timed out waiting for updater state change")
         self._waiting_for_updater = False
 
       # Only enable if we're not waiting for updater to flip out of idle
@@ -158,16 +160,19 @@ class SoftwareLayout(Widget):
       # Start checking for updates
       self._waiting_for_updater = True
       self._waiting_start_ts = time.monotonic()
+      cloudlog.info("software: Start checking for updates")
       os.system("pkill -SIGUSR1 -f system.updated.updated")
     else:
       # Start downloading
       self._waiting_for_updater = True
       self._waiting_start_ts = time.monotonic()
+      cloudlog.info("software: Start downloading")
       os.system("pkill -SIGHUP -f system.updated.updated")
 
   def _on_uninstall(self):
     def handle_uninstall_confirmation(result: DialogResult):
       if result == DialogResult.CONFIRM:
+        cloudlog.info("software: Confirmed uninstall")
         ui_state.params.put_bool("DoUninstall", True)
 
     dialog = ConfirmDialog(tr("Are you sure you want to uninstall?"), tr("Uninstall"), callback=handle_uninstall_confirmation)
@@ -197,6 +202,7 @@ class SoftwareLayout(Widget):
         selection = self._branch_dialog.selection
         ui_state.params.put("UpdaterTargetBranch", selection)
         self._branch_btn.action_item.set_value(selection)
+        cloudlog.info("software: Confirmed updater target branch")
         os.system("pkill -SIGUSR1 -f system.updated.updated")
       self._branch_dialog = None
 
