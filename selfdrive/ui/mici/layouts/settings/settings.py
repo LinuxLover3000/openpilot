@@ -21,7 +21,7 @@ class SettingsLayout(NavScroller):
     self._params = Params()
 
     toggles_panel = TogglesLayoutMici()
-    toggles_btn = SettingsBigButton("toggles", "", gui_app.texture("icons_mici/settings.png", 64, 64))
+    toggles_btn = SettingsBigButton("preferences", "", gui_app.texture("icons_mici/settings.png", 64, 64))
     toggles_btn.set_click_callback(lambda: gui_app.push_widget(toggles_panel))
 
     network_panel = NetworkLayoutMici()
@@ -37,11 +37,11 @@ class SettingsLayout(NavScroller):
     developer_btn.set_click_callback(lambda: gui_app.push_widget(developer_panel))
 
     firehose_panel = FirehoseLayout()
-    firehose_btn = SettingsBigButton("firehose", "", gui_app.texture("icons_mici/settings/firehose.png", 52, 62))
+    firehose_btn = SettingsBigButton("data", "", gui_app.texture("icons_mici/settings/firehose.png", 52, 62))
     firehose_btn.set_click_callback(lambda: gui_app.push_widget(firehose_panel))
 
     nap_panel = NAPLayoutMici()
-    nap_btn = SettingsBigButton("nap", "", gui_app.texture("icons_mici/settings/comma_icon.png", 33, 60))
+    nap_btn = SettingsBigButton("steering", "", gui_app.texture("icons_mici/settings/comma_icon.png", 33, 60))
     nap_btn.set_click_callback(lambda: gui_app.push_widget(nap_panel))
 
     self._scroller.add_widgets([
