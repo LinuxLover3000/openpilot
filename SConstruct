@@ -48,7 +48,8 @@ env = Environment(
     "PYTHONPATH": Dir("#").abspath + ':' + Dir(f"#third_party/acados").abspath,
     "ACADOS_SOURCE_DIR": Dir("#third_party/acados").abspath,
     "ACADOS_PYTHON_INTERFACE_PATH": Dir("#third_party/acados/acados_template").abspath,
-    "TERA_PATH": Dir("#").abspath + f"/third_party/acados/{arch}/t_renderer"
+    "TERA_PATH": Dir("#").abspath + f"/third_party/acados/{arch}/t_renderer",
+    "LLVM_PATH": os.environ.get('LLVM_PATH', '')
   },
   CCFLAGS=[
     "-g",
