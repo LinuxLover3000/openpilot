@@ -1,0 +1,119 @@
+name: vendor acados
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Branch to build from and target with the vendor-update pull request
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: vendor-acados-${{ inputs.source_branch }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64
+            runner: ubuntu-24.04
+          - target: larch64
+            runner: ubuntu-24.04-arm
+          - target: Darwin
+            runner: macos-14
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Validate source branch
+        env:
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+        run: git check-ref-format --branch "$SOURCE_BRANCH"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_branch }}
+          lfs: true
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build acados
+        env:
+          TARGET_ARCH: ${{ matrix.target }}
+        run: third_party/acados/build.sh
+      - name: Package vendor artifacts
+        env:
+          TARGET_ARCH: ${{ matrix.target }}
+        run: |
+          mkdir artifacts
+          tar -C third_party/acados -czf "artifacts/${TARGET_ARCH}.tar.gz" "$TARGET_ARCH"
+          if [ "$TARGET_ARCH" = x86_64 ]; then
+            tar -C third_party/acados -czf artifacts/common.tar.gz include acados_template lib/link_libs.json
+          fi
+      - uses: actions/upload-artifact@v6
+        with:
+          name: acados-${{ matrix.target }}
+          path: artifacts
+          if-no-files-found: error
+
+  publish:
+    name: create vendor update pull request
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate source branch
+        env:
+          SOURCE_BRANCH: ${{ inputs.source_branch }}
+        run: git check-ref-format --branch "$SOURCE_BRANCH"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_branch }}
+          lfs: true
+          fetch-depth: 0
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: acados-*
+          path: artifacts
+          merge-multiple: true
+      - name: Assemble vendor artifacts
+        run: |
+          rm -rf third_party/acados/include third_party/acados/acados_template third_party/acados/lib
+          rm -rf third_party/acados/x86_64 third_party/acados/larch64 third_party/acados/Darwin
+          tar -C third_party/acados -xzf artifacts/common.tar.gz
+          tar -C third_party/acados -xzf artifacts/x86_64.tar.gz
+          tar -C third_party/acados -xzf artifacts/larch64.tar.gz
+          tar -C third_party/acados -xzf artifacts/Darwin.tar.gz
+          test -f third_party/acados/lib/link_libs.json
+      - name: Verify native artifacts
+        run: |
+          file third_party/acados/x86_64/lib/libblasfeo.so | grep -q 'x86-64'
+          file third_party/acados/larch64/lib/libblasfeo.so | grep -q 'ARM aarch64'
+          file third_party/acados/Darwin/lib/libblasfeo.dylib | grep -q 'arm64'
+          readelf -W -l third_party/acados/x86_64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
+          readelf -W -l third_party/acados/larch64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
+      - uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+        with:
+          token: ${{ github.token }}
+          branch: vendor/acados/${{ inputs.source_branch }}
+          base: ${{ inputs.source_branch }}
+          commit-message: "Update vendored acados"
+          title: "Update vendored acados"
+          body: |
+            **Description**
+
+            Automated acados vendor update built from `${{ inputs.source_branch }}`.
+
+            **Verification**
+
+            - Built native `x86_64`, `larch64`, and `Darwin` artifacts.
+            - Verified ELF architecture and non-executable BLASFEO stacks for Linux artifacts.
+          add-paths: |
+            third_party/acados/include
+            third_party/acados/acados_template
+            third_party/acados/lib/link_libs.json
+            third_party/acados/x86_64
+            third_party/acados/larch64
+            third_party/acados/Darwin
