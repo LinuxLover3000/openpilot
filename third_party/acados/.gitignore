@@ -1,5 +1,6 @@
 acados_repo/
-/lib
+/lib/*
+!/lib/link_libs.json
 !x86_64/
 !larch64/
 !aarch64/

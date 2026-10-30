@@ -5,24 +5,22 @@ gen = "c_generated_code"
 casadi_model = [
   f'{gen}/lat_model/lat_expl_ode_fun.c',
   f'{gen}/lat_model/lat_expl_vde_forw.c',
+  f'{gen}/lat_model/lat_expl_vde_adj.c',
 ]
 
 casadi_cost_y = [
   f'{gen}/lat_cost/lat_cost_y_fun.c',
   f'{gen}/lat_cost/lat_cost_y_fun_jac_ut_xt.c',
-  f'{gen}/lat_cost/lat_cost_y_hess.c',
 ]
 
 casadi_cost_e = [
   f'{gen}/lat_cost/lat_cost_y_e_fun.c',
   f'{gen}/lat_cost/lat_cost_y_e_fun_jac_ut_xt.c',
-  f'{gen}/lat_cost/lat_cost_y_e_hess.c',
 ]
 
 casadi_cost_0 = [
   f'{gen}/lat_cost/lat_cost_y_0_fun.c',
   f'{gen}/lat_cost/lat_cost_y_0_fun_jac_ut_xt.c',
-  f'{gen}/lat_cost/lat_cost_y_0_hess.c',
 ]
 
 build_files = [f'{gen}/acados_solver_lat.c'] + casadi_model + casadi_cost_y + casadi_cost_e + casadi_cost_0

@@ -11,7 +11,7 @@ from openpilot.selfdrive.modeld.constants import index_function
 from openpilot.selfdrive.controls.radard import _LEAD_ACCEL_TAU
 
 if __name__ == '__main__':  # generating code
-  from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+  from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
   from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
@@ -20,7 +20,7 @@ from casadi import SX, vertcat
 MODEL_NAME = 'long'
 LONG_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(LONG_MPC_DIR, "c_generated_code")
-JSON_FILE = os.path.join(LONG_MPC_DIR, "acados_ocp_long.json")
+JSON_FILE = "acados_ocp_long.json"
 
 LongitudinalPlanSource = log.LongitudinalPlan.LongitudinalPlanSource
 MPC_SOURCES = (LongitudinalPlanSource.lead0, LongitudinalPlanSource.lead1, LongitudinalPlanSource.cruise)
@@ -126,11 +126,12 @@ def gen_long_model():
 def gen_long_ocp():
   ocp = AcadosOcp()
   ocp.model = gen_long_model()
+  ocp.name = MODEL_NAME
 
   Tf = T_IDXS[-1]
 
   # set dimensions
-  ocp.dims.N = N
+  ocp.solver_options.N_horizon = N
 
   # set cost module
   ocp.cost.cost_type = 'NONLINEAR_LS'
@@ -213,7 +214,8 @@ def gen_long_ocp():
   ocp.solver_options.tf = Tf
   ocp.solver_options.shooting_nodes = T_IDXS
 
-  ocp.code_export_directory = EXPORT_DIR
+  ocp.code_gen_options.code_export_directory = EXPORT_DIR
+  ocp.code_gen_options.json_file = JSON_FILE
   return ocp
 
 
@@ -268,7 +270,7 @@ class LongitudinalMpc:
 
     # Set L2 slack cost on lower bound constraints
     Zl = np.array(constraint_cost_weights)
-    for i in range(N):
+    for i in range(1, N):
       self.solver.cost_set(i, 'Zl', Zl)
 
   def set_weights(self, prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
@@ -368,10 +370,10 @@ class LongitudinalMpc:
     self.solver.constraints_set(0, "ubx", self.x0)
 
     self.solution_status = self.solver.solve()
-    self.solve_time = float(self.solver.get_stats('time_tot')[0])
-    self.time_qp_solution = float(self.solver.get_stats('time_qp')[0])
-    self.time_linearization = float(self.solver.get_stats('time_lin')[0])
-    self.time_integrator = float(self.solver.get_stats('time_sim')[0])
+    self.solve_time = float(self.solver.get_stats('time_tot'))
+    self.time_qp_solution = float(self.solver.get_stats('time_qp'))
+    self.time_linearization = float(self.solver.get_stats('time_lin'))
+    self.time_integrator = float(self.solver.get_stats('time_sim'))
 
     for i in range(N+1):
       self.x_sol[i] = self.solver.get(i, 'x')
@@ -394,4 +396,4 @@ class LongitudinalMpc:
 
 if __name__ == "__main__":
   ocp = gen_long_ocp()
-  AcadosOcpSolver.generate(ocp, json_file=JSON_FILE)
+  AcadosOcpSolver.generate(ocp)

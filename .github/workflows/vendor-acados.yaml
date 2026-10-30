@@ -35,15 +35,19 @@ jobs:
         env:
           SOURCE_BRANCH: ${{ inputs.source_branch }}
         run: git check-ref-format --branch "$SOURCE_BRANCH"
-      - uses: actions/checkout@v6
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_branch }}
           lfs: true
-      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: dtolnay/rust-toolchain@d124f86f28ff42855784ff3319f48ac182c248f8 # 1.99.1
+
       - name: Build acados
         env:
           TARGET_ARCH: ${{ matrix.target }}
         run: third_party/acados/build.sh
+
       - name: Package vendor artifacts
         env:
           TARGET_ARCH: ${{ matrix.target }}
@@ -53,7 +57,8 @@ jobs:
           if [ "$TARGET_ARCH" = x86_64 ]; then
             tar -C third_party/acados -czf artifacts/common.tar.gz include acados_template lib/link_libs.json
           fi
-      - uses: actions/upload-artifact@v6
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: acados-${{ matrix.target }}
           path: artifacts
@@ -68,16 +73,19 @@ jobs:
         env:
           SOURCE_BRANCH: ${{ inputs.source_branch }}
         run: git check-ref-format --branch "$SOURCE_BRANCH"
-      - uses: actions/checkout@v6
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_branch }}
           lfs: true
           fetch-depth: 0
-      - uses: actions/download-artifact@v7
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: acados-*
           path: artifacts
           merge-multiple: true
+
       - name: Assemble vendor artifacts
         run: |
           rm -rf third_party/acados/include third_party/acados/acados_template third_party/acados/lib
@@ -87,6 +95,7 @@ jobs:
           tar -C third_party/acados -xzf artifacts/larch64.tar.gz
           tar -C third_party/acados -xzf artifacts/Darwin.tar.gz
           test -f third_party/acados/lib/link_libs.json
+
       - name: Verify native artifacts
         run: |
           file third_party/acados/x86_64/lib/libblasfeo.so | grep -q 'x86-64'
@@ -94,7 +103,8 @@ jobs:
           file third_party/acados/Darwin/lib/libblasfeo.dylib | grep -q 'arm64'
           readelf -W -l third_party/acados/x86_64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
           readelf -W -l third_party/acados/larch64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
-      - uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
+
+      - uses: peter-evans/create-pull-request@v8.1.1 # immutable
         with:
           token: ${{ github.token }}
           branch: vendor/acados/${{ inputs.source_branch }}

@@ -8,13 +8,13 @@ from casadi import SX, vertcat, sin, cos
 from openpilot.selfdrive.modeld.constants import ModelConstants
 
 if __name__ == '__main__':  # generating code
-  from openpilot.third_party.acados.acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
+  from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 else:
   from openpilot.selfdrive.controls.lib.lateral_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
 LAT_MPC_DIR = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(LAT_MPC_DIR, "c_generated_code")
-JSON_FILE = os.path.join(LAT_MPC_DIR, "acados_ocp_lat.json")
+JSON_FILE = "acados_ocp_lat.json"
 X_DIM = 4
 P_DIM = 2
 COST_E_DIM = 3
@@ -65,11 +65,12 @@ def gen_lat_model():
 def gen_lat_ocp():
   ocp = AcadosOcp()
   ocp.model = gen_lat_model()
+  ocp.name = MODEL_NAME
 
   Tf = np.array(ModelConstants.T_IDXS)[N]
 
   # set dimensions
-  ocp.dims.N = N
+  ocp.solver_options.N_horizon = N
 
   # set cost module
   ocp.cost.cost_type = 'NONLINEAR_LS'
@@ -124,7 +125,8 @@ def gen_lat_ocp():
   ocp.solver_options.tf = Tf
   ocp.solver_options.shooting_nodes = np.array(ModelConstants.T_IDXS)[:N+1]
 
-  ocp.code_export_directory = EXPORT_DIR
+  ocp.code_gen_options.code_export_directory = EXPORT_DIR
+  ocp.code_gen_options.json_file = JSON_FILE
   return ocp
 
 
@@ -195,5 +197,5 @@ class LateralMpc:
 
 if __name__ == "__main__":
   ocp = gen_lat_ocp()
-  AcadosOcpSolver.generate(ocp, json_file=JSON_FILE)
-  # AcadosOcpSolver.build(ocp.code_export_directory, with_cython=True)
+  AcadosOcpSolver.generate(ocp)
+  # AcadosOcpSolver.build(ocp.code_gen_options.code_export_directory, with_cython=True)

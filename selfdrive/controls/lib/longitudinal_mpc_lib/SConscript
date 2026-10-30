@@ -5,24 +5,22 @@ gen = "c_generated_code"
 casadi_model = [
   f'{gen}/long_model/long_expl_ode_fun.c',
   f'{gen}/long_model/long_expl_vde_forw.c',
+  f'{gen}/long_model/long_expl_vde_adj.c',
 ]
 
 casadi_cost_y = [
   f'{gen}/long_cost/long_cost_y_fun.c',
   f'{gen}/long_cost/long_cost_y_fun_jac_ut_xt.c',
-  f'{gen}/long_cost/long_cost_y_hess.c',
 ]
 
 casadi_cost_e = [
   f'{gen}/long_cost/long_cost_y_e_fun.c',
   f'{gen}/long_cost/long_cost_y_e_fun_jac_ut_xt.c',
-  f'{gen}/long_cost/long_cost_y_e_hess.c',
 ]
 
 casadi_cost_0 = [
   f'{gen}/long_cost/long_cost_y_0_fun.c',
   f'{gen}/long_cost/long_cost_y_0_fun_jac_ut_xt.c',
-  f'{gen}/long_cost/long_cost_y_0_hess.c',
 ]
 
 casadi_constraints = [

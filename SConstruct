@@ -45,7 +45,7 @@ pkgs = [importlib.import_module(name) for name in pkg_names]
 env = Environment(
   ENV={
     "PATH": os.environ['PATH'],
-    "PYTHONPATH": Dir("#").abspath + ':' + Dir(f"#third_party/acados").abspath,
+    "PYTHONPATH": Dir("#").abspath,
     "ACADOS_SOURCE_DIR": Dir("#third_party/acados").abspath,
     "ACADOS_PYTHON_INTERFACE_PATH": Dir("#third_party/acados/acados_template").abspath,
     "TERA_PATH": Dir("#").abspath + f"/third_party/acados/{arch}/t_renderer",
