@@ -48,15 +48,45 @@ jobs:
 
       - name: Download all reachable LFS objects
         run: |
-          git -c lfs.url="$SOURCE_LFS_URL" -c lfs.pushurl="$SOURCE_LFS_URL" lfs fetch --all origin
-          git lfs fsck
+          set +e
+          git -c lfs.url="$SOURCE_LFS_URL" -c lfs.pushurl="$SOURCE_LFS_URL" lfs fetch --all origin 2>&1 | tee lfs-fetch.log
+          fetch_status=${PIPESTATUS[0]}
+          set -e
+
+          grep -oE '\[[0-9a-f]{64}\] Object does not exist' lfs-fetch.log |
+            sed 's/^\[//; s/\] Object does not exist$//' |
+            sort -u > unavailable-lfs-oids.txt || true
+
+          if [ "$fetch_status" -ne 0 ] && [ ! -s unavailable-lfs-oids.txt ]; then
+            exit "$fetch_status"
+          fi
+
+          if [ -s unavailable-lfs-oids.txt ]; then
+            echo "::warning::$(wc -l < unavailable-lfs-oids.txt) historical LFS objects are unavailable from the source endpoint"
+          fi
+
+          while read -r oid; do
+            test -f ".git/lfs/objects/${oid:0:2}/${oid:2:2}/$oid"
+          done < <(git lfs ls-files "$SOURCE_BRANCH" -l | awk '{print $1}')
+          git lfs fsck "$SOURCE_BRANCH"
 
       - name: Upload LFS objects to fork
         run: |
           git config --local lfs.url "$FORK_LFS_URL"
           git config --local lfs.pushurl "$FORK_LFS_URL"
-          git lfs push --all origin
-          git lfs push --all --dry-run origin
+          find .git/lfs/objects -type f -regextype posix-extended -regex '.*/[0-9a-f]{64}' -printf '%f\n' |
+            sort -u > available-lfs-oids.txt
+          xargs -r -n 100 git lfs push --object-id origin < available-lfs-oids.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: lfs-migration-report
+          path: |
+            lfs-fetch.log
+            unavailable-lfs-oids.txt
+            available-lfs-oids.txt
+          if-no-files-found: warn
 
       - name: Configure fork-owned LFS endpoint
         run: |
@@ -78,6 +108,6 @@ jobs:
 
             **Verification**
 
-            - Passed `git lfs fsck` after downloading the source objects.
-            - Passed `git lfs push --all origin` and `git lfs push --all --dry-run origin` against the fork endpoint.
+            - Passed `git lfs fsck ${{ inputs.source_branch }}` after downloading the source objects.
+            - Passed `git lfs push --object-id origin` against the fork endpoint.
           add-paths: .lfsconfig
