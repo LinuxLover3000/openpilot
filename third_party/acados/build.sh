@@ -63,6 +63,12 @@ git fetch --all
 git checkout 51db6db146217e6624d7575f34e0421f28bc76a0 # acados main, 2026-10-29
 git submodule update --depth=1 --recursive --init
 
+# BLASFEO 0a3df86 moves its generated target header out of the source tree
+# without updating the ARM kernels' relative include paths.
+BLASFEO_COMMIT=6b182bd8c6b5358a8eadc0604dc7b830d39028b1
+git -C "$DIR/acados_repo/external/blasfeo" fetch --depth=1 origin "$BLASFEO_COMMIT"
+git -C "$DIR/acados_repo/external/blasfeo" checkout "$BLASFEO_COMMIT"
+
 # GCC 16 rejects the pointer-to-pointer arguments in qpOASES' copy helper.
 # The constraints members are already Constraints *, matching ConstraintsCPY.
 QPOASES_QPROBLEM="$DIR/acados_repo/external/qpoases/src/QProblem.c"
