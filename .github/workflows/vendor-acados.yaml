@@ -98,9 +98,9 @@ jobs:
 
       - name: Verify native artifacts
         run: |
-          file third_party/acados/x86_64/lib/libblasfeo.so | grep -q 'x86-64'
-          file third_party/acados/larch64/lib/libblasfeo.so | grep -q 'ARM aarch64'
-          file third_party/acados/Darwin/lib/libblasfeo.dylib | grep -q 'arm64'
+          file -L third_party/acados/x86_64/lib/libblasfeo.so | grep -q 'x86-64'
+          file -L third_party/acados/larch64/lib/libblasfeo.so | grep -q 'ARM aarch64'
+          file -L third_party/acados/Darwin/lib/libblasfeo.dylib | grep -q 'arm64'
           readelf -W -l third_party/acados/x86_64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
           readelf -W -l third_party/acados/larch64/lib/libblasfeo.so | grep -Eq 'GNU_STACK.*RW '
 
