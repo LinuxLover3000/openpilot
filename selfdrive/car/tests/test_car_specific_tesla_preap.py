@@ -28,17 +28,18 @@ def _make_cp(*, fingerprint="TESLA_MODEL_S_PREAP", brand="tesla", pcm_cruise=Fal
   return cp
 
 
-def _make_cs():
+def _make_cs(gear="drive", door_open=False):
   cs = car.CarState.new_message()
   cs.cruiseState.available = True
-  cs.gearShifter = "drive"
+  cs.gearShifter = gear
+  cs.doorOpen = door_open
   return cs
 
 
-def _run(cp, calibrated):
+def _run(cp, calibrated, gear="drive", door_open=False):
   with patch(NAP_CONF_PATH, new_callable=PropertyMock, return_value=calibrated):
     ce = CarSpecificEvents(cp)
-    events = ce.update(_make_cs(), _make_cs(), car.CarControl.new_message())
+    events = ce.update(_make_cs(gear, door_open), _make_cs(gear, door_open), car.CarControl.new_message())
   return events.names
 
 
@@ -66,3 +67,16 @@ def test_silent_on_non_preap_tesla():
 def test_silent_on_non_tesla_brand():
   cp = _make_cp(fingerprint="HONDA_CIVIC_2022", brand="honda", pcm_cruise=True, op_long=False)
   assert EventName.pedalNotCalibrated not in _run(cp, calibrated=False)
+
+
+def test_gear_states_do_not_raise_preap_control_events():
+  cp = _make_cp()
+  for gear in ("unknown", "park", "reverse", "neutral"):
+    events = _run(cp, calibrated=True, gear=gear)
+    assert EventName.wrongGear not in events
+    assert EventName.reverseGear not in events
+
+
+def test_open_panels_do_not_raise_preap_control_events():
+  events = _run(_make_cp(), calibrated=True, door_open=True)
+  assert EventName.doorOpen not in events

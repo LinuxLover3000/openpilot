@@ -29,7 +29,6 @@ All actual safety logic remains active:
 - `controls_allowed` gating on every TX
 - Disengage on hands-on override (level >= 3)
 - Disengage on EPAS error codes 6–9
-- Disengage on door open, gear out of Drive
 - Disengage on stalk cancel (with 600 ms echo filter)
 - AEB events blocked from openpilot
 - EPB `epasControl` mode validation

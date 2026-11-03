@@ -118,18 +118,19 @@ class CarSpecificEvents:
     # so treat it the same as pcmCruise for the enable/disable event path.
     preap_software_cruise = (self.CP.brand == "tesla" and self.CP.carFingerprint == "TESLA_MODEL_S_PREAP"
                              and self.CP.openpilotLongitudinalControl and not self.CP.pcmCruise)
+    preap_tesla = self.CP.brand == "tesla" and self.CP.carFingerprint == "TESLA_MODEL_S_PREAP"
     pcm_enable = (self.CP.pcmCruise and self.CP.brand != 'honda') or preap_software_cruise
     # TODO: on some hyundai cars, the cancel button is also the pause/resume button,
     # so only use it for cancel when running openpilot longitudinal
     allow_button_cancel = self.CP.brand != 'hyundai'
 
-    if CS.doorOpen:
+    if CS.doorOpen and not preap_tesla:
       events.add(EventName.doorOpen)
     if CS.seatbeltUnlatched:
       events.add(EventName.seatbeltNotLatched)
-    if CS.gearShifter != GearShifter.drive and CS.gearShifter not in CI.DRIVABLE_GEARS:
+    if not preap_tesla and CS.gearShifter != GearShifter.drive and CS.gearShifter not in CI.DRIVABLE_GEARS:
       events.add(EventName.wrongGear)
-    if CS.gearShifter == GearShifter.reverse:
+    if not preap_tesla and CS.gearShifter == GearShifter.reverse:
       events.add(EventName.reverseGear)
     if not CS.cruiseState.available:
       events.add(EventName.wrongCarMode)
