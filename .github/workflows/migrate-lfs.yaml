@@ -1,0 +1,83 @@
+name: migrate fork LFS
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: Branch whose reachable LFS objects to preserve
+        required: true
+        type: string
+      confirmation:
+        description: Enter MIGRATE_12_GIB to copy all reachable LFS objects into this fork
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: migrate-lfs-${{ inputs.source_branch }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: migrate LFS objects to fork
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      SOURCE_BRANCH: ${{ inputs.source_branch }}
+      SOURCE_LFS_URL: https://gitlab.com/commaai/openpilot-lfs.git/info/lfs
+      FORK_LFS_URL: ${{ github.server_url }}/${{ github.repository }}.git/info/lfs
+    steps:
+      - name: Validate inputs
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          git check-ref-format --branch "$SOURCE_BRANCH"
+          test "$CONFIRMATION" = MIGRATE_12_GIB
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_branch }}
+          fetch-depth: 0
+          lfs: false
+
+      - name: Fetch all branch references
+        run: git fetch --prune --tags origin '+refs/heads/*:refs/remotes/origin/*'
+
+      - name: Download all reachable LFS objects
+        run: |
+          git -c lfs.url="$SOURCE_LFS_URL" -c lfs.pushurl="$SOURCE_LFS_URL" lfs fetch --all origin
+          git lfs fsck
+
+      - name: Upload LFS objects to fork
+        run: |
+          git config --local lfs.url "$FORK_LFS_URL"
+          git config --local lfs.pushurl "$FORK_LFS_URL"
+          git lfs push --all origin
+          git lfs push --all --dry-run origin
+
+      - name: Configure fork-owned LFS endpoint
+        run: |
+          git config --file .lfsconfig lfs.url "$FORK_LFS_URL"
+          git config --file .lfsconfig lfs.pushurl "$FORK_LFS_URL"
+          git config --file .lfsconfig lfs.locksverify false
+
+      - uses: peter-evans/create-pull-request@v8.1.1 # immutable
+        with:
+          token: ${{ github.token }}
+          branch: configure-fork-lfs/${{ inputs.source_branch }}
+          base: ${{ inputs.source_branch }}
+          commit-message: "Configure fork-owned LFS storage"
+          title: "Configure fork-owned LFS storage"
+          body: |
+            **Description**
+
+            Moves this fork from Comma's read-only LFS endpoint to its GitHub LFS storage after migrating all reachable LFS objects.
+
+            **Verification**
+
+            - Passed `git lfs fsck` after downloading the source objects.
+            - Passed `git lfs push --all origin` and `git lfs push --all --dry-run origin` against the fork endpoint.
+          add-paths: .lfsconfig
