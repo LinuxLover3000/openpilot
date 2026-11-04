@@ -74,22 +74,22 @@ void blasfeo_create_dmat(int m, int n, struct blasfeo_dmat *sA, void *memory);
 void blasfeo_create_dvec(int m, struct blasfeo_dvec *sA, void *memory);
 
 // --- packing
-// pack the column-major matrix A into the matrix struct B
+// pack the column-major matrix A (with leading dimension lda) into the matrix struct B (at row and col offsets bi and bj)
 void blasfeo_pack_dmat(int m, int n, double *A, int lda, struct blasfeo_dmat *sB, int bi, int bj);
-// pack the lower-triangular column-major matrix A into the matrix struct B
+// pack the lower-triangular column-major matrix A (with leading dimension lda) into the matrix struct B (at row and col offsets bi and bj)
 void blasfeo_pack_l_dmat(int m, int n, double *A, int lda, struct blasfeo_dmat *sB, int bi, int bj);
-// pack the upper-triangular column-major matrix A into the matrix struct B
+// pack the upper-triangular column-major matrix A (with leading dimension lda) into the matrix struct B (at row and col offsets bi and bj)
 void blasfeo_pack_u_dmat(int m, int n, double *A, int lda, struct blasfeo_dmat *sB, int bi, int bj);
-// transpose and pack the column-major matrix A into the matrix struct B
+// transpose and pack the column-major matrix A (with leading dimension lda) into the matrix struct B (at row and col offsets bi and bj)
 void blasfeo_pack_tran_dmat(int m, int n, double *A, int lda, struct blasfeo_dmat *sB, int bi, int bj);
-// pack the vector x into the vector structure y
-void blasfeo_pack_dvec(int m, double *x, int xi, struct blasfeo_dvec *sy, int yi);
-// unpack the matrix structure A into the column-major matrix B
+// pack the vector x (using increment incx) into the vector structure y (at offset yi)
+void blasfeo_pack_dvec(int m, double *x, int incx, struct blasfeo_dvec *sy, int yi);
+// unpack the matrix structure A (at row and col offsets ai and aj) into the column-major matrix B (with leading dimension ldb)
 void blasfeo_unpack_dmat(int m, int n, struct blasfeo_dmat *sA, int ai, int aj, double *B, int ldb);
-// transpose and unpack the matrix structure A into the column-major matrix B
+// transpose and unpack the matrix structure A (at row and col offsets ai and aj) into the column-major matrix B (with leading dimension ldb)
 void blasfeo_unpack_tran_dmat(int m, int n, struct blasfeo_dmat *sA, int ai, int aj, double *B, int ldb);
-// pack the vector structure x into the vector y
-void blasfeo_unpack_dvec(int m, struct blasfeo_dvec *sx, int xi, double *y,  int yi);
+// unpack the vector structure x (at offset xi) into the vector y (using increment incy)
+void blasfeo_unpack_dvec(int m, struct blasfeo_dvec *sx, int xi, double *y, int incy);
 
 // --- cast
 //
@@ -160,8 +160,8 @@ void blasfeo_drowex(int kmax, double alpha, struct blasfeo_dmat *sA, int ai, int
 void blasfeo_drowad(int kmax, double alpha, struct blasfeo_dvec *sx, int xi, struct blasfeo_dmat *sA, int ai, int aj);
 void blasfeo_drowad_sp(int kmax, double alpha, struct blasfeo_dvec *sx, int xi, int *idx, struct blasfeo_dmat *sD, int di, int dj);
 void blasfeo_drowsw(int kmax, struct blasfeo_dmat *sA, int ai, int aj, struct blasfeo_dmat *sC, int ci, int cj);
-void blasfeo_drowpe(int kmax, int *ipiv, struct blasfeo_dmat *sA);
-void blasfeo_drowpei(int kmax, int *ipiv, struct blasfeo_dmat *sA);
+void blasfeo_drowpe(int kmax, int *ipiv, int n, struct blasfeo_dmat *sA, int ai, int aj);
+void blasfeo_drowpei(int kmax, int *ipiv, int n, struct blasfeo_dmat *sA, int ai, int aj);
 
 // col
 void blasfeo_dcolex(int kmax, struct blasfeo_dmat *sA, int ai, int aj, struct blasfeo_dvec *sx, int xi);
@@ -169,8 +169,8 @@ void blasfeo_dcolin(int kmax, struct blasfeo_dvec *sx, int xi, struct blasfeo_dm
 void blasfeo_dcolad(int kmax, double alpha, struct blasfeo_dvec *sx, int xi, struct blasfeo_dmat *sA, int ai, int aj);
 void blasfeo_dcolsc(int kmax, double alpha, struct blasfeo_dmat *sA, int ai, int aj);
 void blasfeo_dcolsw(int kmax, struct blasfeo_dmat *sA, int ai, int aj, struct blasfeo_dmat *sC, int ci, int cj);
-void blasfeo_dcolpe(int kmax, int *ipiv, struct blasfeo_dmat *sA);
-void blasfeo_dcolpei(int kmax, int *ipiv, struct blasfeo_dmat *sA);
+void blasfeo_dcolpe(int kmax, int *ipiv, int m, struct blasfeo_dmat *sA, int ai, int aj);
+void blasfeo_dcolpei(int kmax, int *ipiv, int m, struct blasfeo_dmat *sA, int ai, int aj);
 
 // vec
 // a <= alpha
@@ -206,6 +206,7 @@ void blasfeo_dveccl_mask(int m,
 void blasfeo_dvecze(int m, struct blasfeo_dvec *sm, int mi, struct blasfeo_dvec *sv, int vi, struct blasfeo_dvec *se, int ei);
 void blasfeo_dvecnrm_inf(int m, struct blasfeo_dvec *sx, int xi, double *ptr_norm);
 void blasfeo_dvecnrm_2(int m, struct blasfeo_dvec *sx, int xi, double *ptr_norm);
+void blasfeo_dvecnrm_1(int m, struct blasfeo_dvec *sx, int xi, double *ptr_norm);
 void blasfeo_dvecpe(int kmax, int *ipiv, struct blasfeo_dvec *sx, int xi);
 void blasfeo_dvecpei(int kmax, int *ipiv, struct blasfeo_dvec *sx, int xi);
 

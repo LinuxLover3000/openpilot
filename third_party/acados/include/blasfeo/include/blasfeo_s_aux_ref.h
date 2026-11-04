@@ -57,14 +57,12 @@ extern "C" {
 
 // returns the memory size (in bytes) needed for a smat
 size_t blasfeo_ref_memsize_smat(int m, int n);
-size_t blasfeo_ref_memsize_smat_ps(int ps, int m, int n);
 // returns the memory size (in bytes) needed for the diagonal of a smat
 size_t blasfeo_ref_memsize_diag_smat(int m, int n);
 // returns the memory size (in bytes) needed for a svec
 size_t blasfeo_ref_memsize_svec(int m);
 // create a strmat for a matrix of size m*n by using memory passed by a pointer (pointer is not updated)
 void blasfeo_ref_create_smat(int m, int n, struct blasfeo_smat *sA, void *memory);
-void blasfeo_ref_create_smat_ps(int ps, int m, int n, struct blasfeo_smat *sA, void *memory);
 // create a strvec for a vector of size m by using memory passed by a pointer (pointer is not updated)
 void blasfeo_ref_create_svec(int m, struct blasfeo_svec *sA, void *memory);
 void blasfeo_ref_pack_smat(int m, int n, float *A, int lda, struct blasfeo_smat *sA, int ai, int aj);
@@ -107,16 +105,16 @@ void blasfeo_ref_srowex(int kmax, float alpha, struct blasfeo_smat *sA, int ai, 
 void blasfeo_ref_srowad(int kmax, float alpha, struct blasfeo_svec *sx, int xi, struct blasfeo_smat *sA, int ai, int aj);
 void blasfeo_ref_srowad_sp(int kmax, float alpha, struct blasfeo_svec *sx, int xi, int *idx, struct blasfeo_smat *sD, int di, int dj);
 void blasfeo_ref_srowsw(int kmax, struct blasfeo_smat *sA, int ai, int aj, struct blasfeo_smat *sC, int ci, int cj);
-void blasfeo_ref_srowpe(int kmax, int *ipiv, struct blasfeo_smat *sA);
-void blasfeo_ref_srowpei(int kmax, int *ipiv, struct blasfeo_smat *sA);
+void blasfeo_ref_srowpe(int kmax, int *ipiv, int n, struct blasfeo_smat *sA, int ai, int aj);
+void blasfeo_ref_srowpei(int kmax, int *ipiv, int n, struct blasfeo_smat *sA, int ai, int aj);
 // col
 void blasfeo_ref_scolex(int kmax, struct blasfeo_smat *sA, int ai, int aj, struct blasfeo_svec *sx, int xi);
 void blasfeo_ref_scolin(int kmax, struct blasfeo_svec *sx, int xi, struct blasfeo_smat *sA, int ai, int aj);
 void blasfeo_ref_scolad(int kmax, float alpha, struct blasfeo_svec *sx, int xi, struct blasfeo_smat *sA, int ai, int aj);
 void blasfeo_ref_scolsc(int kmax, float alpha, struct blasfeo_smat *sA, int ai, int aj);
 void blasfeo_ref_scolsw(int kmax, struct blasfeo_smat *sA, int ai, int aj, struct blasfeo_smat *sC, int ci, int cj);
-void blasfeo_ref_scolpe(int kmax, int *ipiv, struct blasfeo_smat *sA);
-void blasfeo_ref_scolpei(int kmax, int *ipiv, struct blasfeo_smat *sA);
+void blasfeo_ref_scolpe(int kmax, int *ipiv, int m, struct blasfeo_smat *sA, int ai, int aj);
+void blasfeo_ref_scolpei(int kmax, int *ipiv, int m, struct blasfeo_smat *sA, int ai, int aj);
 // vec
 void blasfeo_ref_svecse(int m, float alpha, struct blasfeo_svec *sx, int xi);
 void blasfeo_ref_sveccp(int m, struct blasfeo_svec *sa, int ai, struct blasfeo_svec *sc, int ci);
@@ -134,6 +132,8 @@ void blasfeo_ref_sveccl(int m, struct blasfeo_svec *sxm, int xim, struct blasfeo
 void blasfeo_ref_sveccl_mask(int m, struct blasfeo_svec *sxm, int xim, struct blasfeo_svec *sx, int xi, struct blasfeo_svec *sxp, int xip, struct blasfeo_svec *sz, int zi, struct blasfeo_svec *sm, int mi);
 void blasfeo_ref_svecze(int m, struct blasfeo_svec *sm, int mi, struct blasfeo_svec *sv, int vi, struct blasfeo_svec *se, int ei);
 void blasfeo_ref_svecnrm_inf(int m, struct blasfeo_svec *sx, int xi, float *ptr_norm);
+void blasfeo_ref_svecnrm_2(int m, struct blasfeo_svec *sx, int xi, float *ptr_norm);
+void blasfeo_ref_svecnrm_1(int m, struct blasfeo_svec *sx, int xi, float *ptr_norm);
 void blasfeo_ref_svecpe(int kmax, int *ipiv, struct blasfeo_svec *sx, int xi);
 void blasfeo_ref_svecpei(int kmax, int *ipiv, struct blasfeo_svec *sx, int xi);
 

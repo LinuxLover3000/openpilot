@@ -3,39 +3,14 @@
 %
 % This file is part of acados.
 %
-% The 2-Clause BSD License
-%
-% Redistribution and use in source and binary forms, with or without
-% modification, are permitted provided that the following conditions are met:
-%
-% 1. Redistributions of source code must retain the above copyright notice,
-% this list of conditions and the following disclaimer.
-%
-% 2. Redistributions in binary form must reproduce the above copyright notice,
-% this list of conditions and the following disclaimer in the documentation
-% and/or other materials provided with the distribution.
-%
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-% AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-% IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-% ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-% LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-% CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-% SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-% CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-% POSSIBILITY OF SUCH DAMAGE.;
+% Licensed under the 2-Clause BSD License.
 
 %
 
-classdef {{ model.name }}_mex_solver < handle
+classdef {{ name }}_mex_solver < handle
 
     properties
         C_ocp
-        C_ocp_ext_fun
-        cost_ext_fun_type
-        cost_ext_fun_type_e
         N
         name
         code_gen_dir
@@ -46,37 +21,49 @@ classdef {{ model.name }}_mex_solver < handle
     methods
 
         % constructor
-        function obj = {{ model.name }}_mex_solver()
-            make_mex_{{ model.name }}();
-            [obj.C_ocp, obj.C_ocp_ext_fun] = acados_mex_create_{{ model.name }}();
+        function obj = {{ name }}_mex_solver(solver_creation_opts)
+            if solver_creation_opts.compile_mex_wrapper
+                make_mex_{{ name }}();
+            end
+            obj.C_ocp = acados_mex_create_{{ name }}();
             % to have path to destructor when changing directory
             addpath('.')
-            obj.cost_ext_fun_type = '{{ cost.cost_ext_fun_type }}';
-            obj.cost_ext_fun_type_e = '{{ cost.cost_ext_fun_type_e }}';
-            obj.N = {{ dims.N }};
-            obj.name = '{{ model.name }}';
-            obj.code_gen_dir = pwd();
+            obj.N = {{ solver_options.N_horizon }};
+            obj.name = '{{ name }}';
         end
 
         % destructor
         function delete(obj)
             disp("delete template...");
-            return_dir = pwd();
-            cd(obj.code_gen_dir);
             if ~isempty(obj.C_ocp)
-                acados_mex_free_{{ model.name }}(obj.C_ocp);
+                acados_mex_free_{{ name }}(obj.C_ocp);
             end
-            cd(return_dir);
             disp("done.");
         end
 
-        % solve
         function solve(obj)
-            acados_mex_solve_{{ model.name }}(obj.C_ocp);
+            acados_mex_solve_{{ name }}(obj.C_ocp);
         end
 
-        % set -- borrowed from MEX interface
+        function status = custom_update(obj, data)
+            status = acados_mex_custom_update_{{ name }}(obj.C_ocp, data);
+        end
+
+        function P = get_zoRO_Pk_matrices(obj, varargin)
+            % P = ocp. get_zoRO_Pk_matrices()       -> returns 1x(N+1) cell of P^k matrices
+            % P = ocp.get_zoRO_Pk_matrices(stage)  -> returns [nx x nx] matrix for stage
+            if nargin == 1
+                P = acados_mex_get_zoRO_Pk_{{ name }}(obj.C_ocp);
+            else
+                P = acados_mex_get_zoRO_Pk_{{ name }}(obj.C_ocp, varargin{1});
+            end
+        end
+
         function set(varargin)
+            % usage:
+            % ocp.set(field, value) - value is a flattened concatenation of a trajectory of values
+            % ocp.set(field, value, stage) - set the value for the given field at a single stage
+            % ocp.set(field, value, stage_0, stage_e) - set the value for the given field at a range of stages, 0-based indexing, stage_e is not included
             obj = varargin{1};
             field = varargin{2};
             value = varargin{3};
@@ -84,30 +71,77 @@ classdef {{ model.name }}_mex_solver < handle
                 error('field must be a char vector, use '' ''');
             end
             if nargin==3
-                acados_mex_set_{{ model.name }}(obj.cost_ext_fun_type, obj.cost_ext_fun_type_e, obj.C_ocp, obj.C_ocp_ext_fun, field, value);
+                acados_mex_set_{{ name }}(obj.C_ocp, field, value);
             elseif nargin==4
                 stage = varargin{4};
-                acados_mex_set_{{ model.name }}(obj.cost_ext_fun_type, obj.cost_ext_fun_type_e, obj.C_ocp, obj.C_ocp_ext_fun, field, value, stage);
+                acados_mex_set_{{ name }}(obj.C_ocp, field, value, stage);
+            elseif nargin==5
+                stage_0 = varargin{4};
+                stage_e = varargin{5};
+                acados_mex_set_{{ name }}(obj.C_ocp, field, value, stage_0, stage_e);
             else
-                disp('acados_ocp.set: wrong number of input arguments (2 or 3 allowed)');
+                error('acados_ocp.set: wrong number of input arguments, 2 to 4 are allowed.\n');
+            end
+        end
+
+
+        function set_params_sparse(varargin)
+            % usage:
+            % ocp.set_params_sparse(idx_values, param_values, Optional[stage])
+            % updates the parameters with indices idx_values (0 based) at stage with the new values new_p_values.
+            % if stage is not provided, sparse parameter update is performed for all stages.
+            obj = varargin{1};
+            idx_values = varargin{2};
+            param_values = varargin{3};
+            value = [idx_values(:), param_values(:)];
+            field = 'params_sparse';
+
+            if ~isa(field, 'char')
+                error('field must be a char vector, use '' ''');
+            end
+            if nargin==3
+                acados_mex_set_{{ name }}(obj.C_ocp, field, value);
+            elseif nargin==4
+                stage = varargin{4};
+                acados_mex_set_{{ name }}(obj.C_ocp, field, value, stage);
+            else
+                error('acados_ocp.set_params_sparse: wrong number of input arguments (3 to 4 allowed)');
             end
         end
 
         function value = get_cost(obj)
-            value = ocp_get_cost(obj.C_ocp);
+            value = ocp_get(obj.C_ocp, 'cost_value');
         end
 
-        % get -- borrowed from MEX interface
+        function value = evaluate_constraints_and_get_violation(obj)
+            value = ocp_get(obj.C_ocp, 'constraint_violation');
+        end
+
+        function dump_last_qp_to_json(obj, varargin)
+            %%% Dumps the latest QP data into a json file
+            %%% param1: filename: if not set, use model_name + '_QP.json'
+            if nargin>=2
+                filename = varargin{1};
+            else
+                filename = [obj.name, '_QP.json'];
+            end
+            ocp_dump_qp(obj.C_ocp, filename);
+        end
+
+        function eval_param_sens(obj, field, stage, index)
+            ocp_eval_param_sens(obj.C_ocp, field, stage, index);
+        end
+
         function value = get(varargin)
             % usage:
             % obj.get(field, value, [stage])
             obj = varargin{1};
             field = varargin{2};
-            if any(strfind('sens', field))
-                error('field sens* (sensitivities of optimal solution) not yet supported for templated MEX.')
-            end
             if ~isa(field, 'char')
                 error('field must be a char vector, use '' ''');
+            end
+            if any(strfind('sens', field))
+                error('field sens* (sensitivities of optimal solution) not yet supported for templated MEX.')
             end
 
             if nargin==2
@@ -115,104 +149,51 @@ classdef {{ model.name }}_mex_solver < handle
             elseif nargin==3
                 stage = varargin{3};
                 value = ocp_get(obj.C_ocp, field, stage);
+            elseif nargin==4
+                stage = varargin{3};
+                iteration = varargin{4};
+                value = ocp_get(obj.C_ocp, field, stage, iteration);
             else
-                disp('acados_ocp.get: wrong number of input arguments (1 or 2 allowed)');
+                error('acados_ocp.get: wrong number of input arguments (1, 2 or 3 allowed)');
+            end
+
+
+            % make symmetric (only lower triangular stored internally)
+            if strcmp('qp_Q', field) || strcmp('qp_R', field)
+                if iscell(value)
+                    for i=1:length(value)
+                        if length(value{i}) > 1
+                            value{i} = tril(value{i}) + tril(value{i}, -1)';
+                        end
+                    end
+                else
+                    if length(value) > 1
+                        value = tril(value) + tril(value, -1)';
+                    end
+                end
             end
         end
 
-
-        function [] = store_iterate(varargin)
-            %%%  Stores the current iterate of the ocp solver in a json file.
-            %%% param1: filename: if not set, use model_name + timestamp + '.json'
-            %%% param2: overwrite: if false and filename exists add timestamp to filename
-
+        function [] = reset(varargin)
+            % usage:
+            % obj.reset()
+            % obj.reset(reset_qp_solver_mem, reset_numerical_values, reset_solver_options, reset_x_to_x0_bar)
+            % additional flags are optional, default values are 1,0,0,0
             obj = varargin{1};
-            filename = '';
-            overwrite = false;
 
-            if nargin>=2
-                filename = varargin{2};
-                if ~isa(filename, 'char')
-                    error('filename must be a char vector, use '' ''');
+            if nargin > 5
+                error('reset expects at most 4 flags: reset_qp_solver_mem, reset_numerical_values, reset_solver_options, reset_x_to_x0_bar');
+            end
+
+            flags = [1, 0, 0, 0];
+            for i=2:nargin
+                if ~isscalar(varargin{i}) || ~(varargin{i} == 0 || varargin{i} == 1)
+                    error('reset flags must be numeric (0 or 1)');
                 end
+                flags(i-1) = varargin{i};
             end
 
-            if nargin==3
-                overwrite = varargin{3};
-            end
-
-            if nargin > 3
-                disp('acados_ocp.get: wrong number of input arguments (1 or 2 allowed)');
-            end
-
-            if strcmp(filename,'')
-                filename = [obj.name '_iterate.json'];
-            end
-            if ~overwrite
-                % append timestamp
-                if exist(filename, 'file')
-                    filename = filename(1:end-5);
-                    filename = [filename '_' datestr(now,'yyyy-mm-dd-HH:MM:SS') '.json'];
-                end
-            end
-            filename = fullfile(pwd, filename);
-
-            % get iterate:
-            solution = struct();
-            for i=0:obj.N
-                solution.(['x_' num2str(i)]) = obj.get('x', i);
-                solution.(['lam_' num2str(i)]) = obj.get('lam', i);
-                solution.(['t_' num2str(i)]) = obj.get('t', i);
-                solution.(['sl_' num2str(i)]) = obj.get('sl', i);
-                solution.(['su_' num2str(i)]) = obj.get('su', i);
-            end
-            for i=0:obj.N-1
-                solution.(['z_' num2str(i)]) = obj.get('z', i);
-                solution.(['u_' num2str(i)]) = obj.get('u', i);
-                solution.(['pi_' num2str(i)]) = obj.get('pi', i);
-            end
-
-            acados_folder = getenv('ACADOS_INSTALL_DIR');
-            addpath(fullfile(acados_folder, 'external', 'jsonlab'));
-            savejson('', solution, filename);
-
-            json_string = savejson('', solution, 'ForceRootName', 0);
-
-            fid = fopen(filename, 'w');
-            if fid == -1, error('store_iterate: Cannot create JSON file'); end
-            fwrite(fid, json_string, 'char');
-            fclose(fid);
-
-            disp(['stored current iterate in ' filename]);
-        end
-
-
-        function [] = load_iterate(obj, filename)
-            %%%  Loads the iterate stored in json file with filename into the ocp solver.
-            acados_folder = getenv('ACADOS_INSTALL_DIR');
-            addpath(fullfile(acados_folder, 'external', 'jsonlab'));
-            filename = fullfile(pwd, filename);
-
-            if ~exist(filename, 'file')
-                error(['load_iterate: failed, file does not exist: ' filename])
-            end
-
-            solution = loadjson(filename);
-            keys = fieldnames(solution);
-
-            for k = 1:numel(keys)
-                key = keys{k};
-                key_parts = strsplit(key, '_');
-                field = key_parts{1};
-                stage = key_parts{2};
-
-                val = solution.(key);
-
-                % check if array is empty (can happen for z)
-                if numel(val) > 0
-                    obj.set(field, val, str2num(stage))
-                end
-            end
+            acados_mex_set_{{ name }}(obj.C_ocp, 'reset', flags);
         end
 
 
@@ -228,7 +209,7 @@ classdef {{ model.name }}_mex_solver < handle
 
             if strcmp(field, 'stat')
                 stat = obj.get('stat');
-                {%- if solver_options.nlp_solver_type == "SQP" %}
+            {%- if solver_options.nlp_solver_type == "SQP" %}
                 fprintf('\niter\tres_stat\tres_eq\t\tres_ineq\tres_comp\tqp_stat\tqp_iter\talpha');
                 if size(stat,2)>8
                     fprintf('\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp');
@@ -242,20 +223,50 @@ classdef {{ model.name }}_mex_solver < handle
                     fprintf('\n');
                 end
                 fprintf('\n');
-                {%- else %}
-                fprintf('\niter\tqp_status\tqp_iter');
-                if size(stat,2)>3
-                    fprintf('\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp');
+            {%- elif solver_options.nlp_solver_type == "SQP_RTI" %}
+                header = sprintf('\niter\tqp_stat\tqp_iter');
+                {%- if solver_options.nlp_solver_ext_qp_res == 1 %}
+                header = [header, sprintf('\tqp_res_stat\tqp_res_eq\tqp_res_ineq\tqp_res_comp')];
+                {%- endif %}
+                {%- if solver_options.rti_log_residuals == 1 %}
+                header = [header, sprintf('\tres_stat\tres_eq\t\tres_ineq\tres_comp')];
+                {%- endif %}
+                fprintf('%s\n', header);
+                for jj=1:size(stat,1)
+                    line = sprintf('%d\t%d\t%d', stat(jj,1), stat(jj,2), stat(jj,3));
+                    offset = 3;
+                    {%- if solver_options.nlp_solver_ext_qp_res == 1 %}
+                    line = [line, sprintf('\t%e\t%e\t%e\t%e', stat(jj,offset+1), stat(jj,offset+2), stat(jj,offset+3), stat(jj,offset+4))];
+                    offset = offset + 4;
+                    {%- endif %}
+                    {%- if solver_options.rti_log_residuals == 1 %}
+                    line = [line, sprintf('\t%e\t%e\t%e\t%e', stat(jj,offset+1), stat(jj,offset+2), stat(jj,offset+3), stat(jj,offset+4))];
+                    {%- endif %}
+                    fprintf('%s\n', line);
                 end
                 fprintf('\n');
+            {%- elif solver_options.nlp_solver_type == "DDP" %}
                 for jj=1:size(stat,1)
-                    fprintf('%d\t%d\t\t%d', stat(jj,1), stat(jj,2), stat(jj,3));
-                    if size(stat,2)>3
-                        fprintf('\t%e\t%e\t%e\t%e', stat(jj,4), stat(jj,5), stat(jj,6), stat(jj,7));
+                    if mod(jj-1, 10) == 0
+                        fprintf('%6s | %10s | %10s | %10s | %10s | %10s | %10s | %10s\n', ...
+                            'iter.', 'objective', 'res_eq', 'res_stat', 'alpha', 'LM_reg.', 'qp_status', 'qp_iter.');
                     end
-                    fprintf('\n');
+                    fprintf('%6d | %10.4e | %10.4e | %10.4e | %10.4e | %10.4e | %10d | %10d\n', ...
+                        stat(jj,1), stat(jj,4), stat(jj,3), stat(jj,2), stat(jj,8), stat(jj,5), stat(jj,6), stat(jj,7));
                 end
-                {% endif %}
+                fprintf('\n');
+            {%- elif solver_options.nlp_solver_type == "SQP_WITH_FEASIBLE_QP" %}
+                fprintf('%5s   %10s   %10s   %10s   %10s   %8s   %6s   %8s   %6s   %8s   %6s   %10s   %8s   %8s\n', ...
+                    '#it', 'res_stat', 'res_eq', 'res_ineq', 'res_comp', 'qp1_stat', 'qp1_it', ...
+                    'qp2_stat', 'qp2_it', 'qp3_stat', 'qp3_it', 'alpha', '||pi||', '||lam||');
+                for jj=1:size(stat,1)
+                    fprintf('%5d   %10.4e   %10.4e   %10.4e   %10.4e   %8d   %6d   %8d   %6d   %8d   %6d   %10.4e   %8.2e   %8.2e\n', ...
+                        stat(jj,1), stat(jj,2), stat(jj,3), stat(jj,4), stat(jj,5), ...
+                        stat(jj,6), stat(jj,7), stat(jj,8), stat(jj,9), stat(jj,10), stat(jj,11), ...
+                        stat(jj,12), stat(jj,13), stat(jj,14));
+                end
+                fprintf('\n');
+            {%- endif %}
 
             else
                 fprintf('unsupported field in function print of acados_ocp.print, got %s', field);

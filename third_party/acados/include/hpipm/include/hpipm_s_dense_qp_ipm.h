@@ -48,6 +48,7 @@
 #include <hpipm_s_dense_qp.h>
 #include <hpipm_s_dense_qp_res.h>
 #include <hpipm_s_dense_qp_sol.h>
+#include <hpipm_s_dense_qp_seed.h>
 
 
 
@@ -65,11 +66,15 @@ struct s_dense_qp_ipm_arg
 	float res_b_max; // exit cond on inf norm of residuals
 	float res_d_max; // exit cond on inf norm of residuals
 	float res_m_max; // exit cond on inf norm of residuals
+	float dual_gap_max; // exit cond on duality gap
 	float reg_prim; // reg of primal hessian
 	float reg_dual; // reg of dual hessian
 	float lam_min; // min value in lam vector
 	float t_min; // min value in t vector
 	float tau_min; // min value of barrier parameter
+	float lam0_min; // min value in lam vector at hot start initialization
+	float t0_min; // min value in t vector at hot start initialization
+	float m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int iter_max; // exit cond in iter number
 	int stat_max; // iterations saved in stat
 	int pred_corr; // Mehrotra's predictor-corrector IPM algirthm
@@ -77,7 +82,7 @@ struct s_dense_qp_ipm_arg
 	int scale; // scale hessian
 	int itref_pred_max; // max number of iterative refinement steps for predictor step
 	int itref_corr_max; // max number of iterative refinement steps for corrector step
-	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol
+	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol, 3 hot start
 	int lq_fact; // 0 syrk+potrf, 1 mix, 2 lq
 	int abs_form; // absolute IPM formulation
 	int comp_res_exit; // compute residuals on exit (only for abs_form==1)
@@ -87,6 +92,8 @@ struct s_dense_qp_ipm_arg
 	int compute_obj; // compute obj on exit
 	int split_step; // use different steps for primal and dual variables
 	int t_lam_min; // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
+	int t0_init; // initialization scheme of slacks t (with corresponding multiplier lam=mu0/t): 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
+	int update_fact_exit; // provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
 	int mode;
 	hpipm_size_t memsize;
 	};
@@ -115,7 +122,6 @@ struct s_dense_qp_ipm_ws
 	struct blasfeo_svec *sv; // scale for Lv
 	struct blasfeo_svec *se; // scale for Le
 	struct blasfeo_svec *tmp_nbg; // work space of size nb+ng
-	struct blasfeo_svec *tmp_ns; // work space of size ns
 	struct blasfeo_smat *lq0;
 	struct blasfeo_smat *lq1;
 	struct blasfeo_svec *tmp_m;
@@ -136,6 +142,9 @@ struct s_dense_qp_ipm_ws
 	struct blasfeo_svec *b_bkp; // pointer to backup b
 	struct blasfeo_smat *Ab_LU;
 	float *stat; // convergence statistics
+	float *eig_V;
+	float *eig_d;
+	float *eig_e;
 	int *ipiv_v;
 	int *ipiv_e;
 	int *ipiv_e1;
@@ -143,6 +152,8 @@ struct s_dense_qp_ipm_ws
 	void *lq_work1;
 	void *lq_work_null;
 	void *orglq_work_null;
+	float preg_last;
+	float dreg_last;
 	int iter; // iteration number
 	int stat_max; // iterations saved in stat
 	int stat_m; // numer of recorded stat per ipm iter
@@ -151,9 +162,12 @@ struct s_dense_qp_ipm_ws
 	int use_A_fact;
 	int status;
 	int lq_fact; // cache from arg
+	int last_lq_fact; // actual lq fact at last iter
 	int mask_constr; // use constr mask
 	int ne_li; // number of linearly independent equality constraints
 	int ne_bkp; // ne backup
+	int npd_reg_hess; // at last iter, hessian has been regularized to get positive (semi) definite
+	int npd_hess; // can be used to signal that hessian has been found to be not positive definite
 	hpipm_size_t memsize; // memory size (in bytes) of workspace
 	};
 
@@ -182,6 +196,8 @@ void s_dense_qp_ipm_arg_set_tol_ineq(float *tol_ineq, struct s_dense_qp_ipm_arg 
 //
 void s_dense_qp_ipm_arg_set_tol_comp(float *tol_comp, struct s_dense_qp_ipm_arg *arg);
 //
+void s_dense_qp_ipm_arg_set_tol_dual_gap(float *tol_dual_gap, struct s_dense_qp_ipm_arg *arg);
+//
 void s_dense_qp_ipm_arg_set_reg_prim(float *reg, struct s_dense_qp_ipm_arg *arg);
 //
 void s_dense_qp_ipm_arg_set_reg_dual(float *reg, struct s_dense_qp_ipm_arg *arg);
@@ -201,6 +217,10 @@ void s_dense_qp_ipm_arg_set_lam_min(float *value, struct s_dense_qp_ipm_arg *arg
 void s_dense_qp_ipm_arg_set_t_min(float *value, struct s_dense_qp_ipm_arg *arg);
 //
 void s_dense_qp_ipm_arg_set_tau_min(float *value, struct s_dense_qp_ipm_arg *arg);
+// min value of lam in the hot start initialization
+void s_dense_qp_ipm_arg_set_lam0_min(float *value, struct s_dense_qp_ipm_arg *arg);
+// min value of t in the hot start initialization
+void s_dense_qp_ipm_arg_set_t0_min(float *value, struct s_dense_qp_ipm_arg *arg);
 //
 void s_dense_qp_ipm_arg_set_kkt_fact_alg(int *value, struct s_dense_qp_ipm_arg *arg);
 //
@@ -210,7 +230,19 @@ void s_dense_qp_ipm_arg_set_compute_obj(int *value, struct s_dense_qp_ipm_arg *a
 //
 void s_dense_qp_ipm_arg_set_split_step(int *value, struct s_dense_qp_ipm_arg *arg);
 //
+void s_dense_qp_ipm_arg_set_m_safe(float *value, struct s_dense_qp_ipm_arg *arg);
+//
 void s_dense_qp_ipm_arg_set_t_lam_min(int *value, struct s_dense_qp_ipm_arg *arg);
+//
+void s_dense_qp_ipm_arg_set_t0_init(int *value, struct s_dense_qp_ipm_arg *arg);
+// provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
+void s_dense_qp_ipm_arg_set_update_fact_exit(int *value, struct s_dense_qp_ipm_arg *arg);
+//
+void s_dense_qp_ipm_arg_get(char *field, struct s_dense_qp_ipm_arg *arg, void *value);
+//
+void s_dense_qp_ipm_arg_get_lam0_min(struct s_dense_qp_ipm_arg *arg, float *value);
+//
+void s_dense_qp_ipm_arg_get_t0_min(struct s_dense_qp_ipm_arg *arg, float *value);
 
 //
 hpipm_size_t s_dense_qp_ipm_ws_memsize(struct s_dense_qp_dim *qp_dim, struct s_dense_qp_ipm_arg *arg);
@@ -231,6 +263,12 @@ void s_dense_qp_ipm_get_max_res_ineq(struct s_dense_qp_ipm_ws *ws, float *res_in
 //
 void s_dense_qp_ipm_get_max_res_comp(struct s_dense_qp_ipm_ws *ws, float *res_comp);
 //
+void s_dense_qp_ipm_get_dual_gap(struct s_dense_qp_ipm_ws *ws, float *dual_gap);
+//
+void s_dense_qp_ipm_get_obj(struct s_dense_qp_ipm_ws *ws, float *obj);
+//
+void s_dense_qp_ipm_get_tau_iter(struct s_dense_qp_ipm_ws *ws, float *tau_iter);
+//
 void s_dense_qp_ipm_get_stat(struct s_dense_qp_ipm_ws *ws, float **stat);
 //
 void s_dense_qp_ipm_get_stat_m(struct s_dense_qp_ipm_ws *ws, int *stat_m);
@@ -245,7 +283,9 @@ void s_dense_qp_ipm_solve(struct s_dense_qp *qp, struct s_dense_qp_sol *qp_sol, 
 //
 void s_dense_qp_ipm_predict(struct s_dense_qp *qp, struct s_dense_qp_sol *qp_sol, struct s_dense_qp_ipm_arg *arg, struct s_dense_qp_ipm_ws *ws);
 //
-void s_dense_qp_ipm_sens(struct s_dense_qp *qp, struct s_dense_qp_sol *qp_sol, struct s_dense_qp_ipm_arg *arg, struct s_dense_qp_ipm_ws *ws);
+void s_dense_qp_ipm_sens_frw(struct s_dense_qp *qp, struct s_dense_qp_seed *seed, struct s_dense_qp_sol *sens, struct s_dense_qp_ipm_arg *arg, struct s_dense_qp_ipm_ws *ws);
+//
+void s_dense_qp_ipm_sens_adj(struct s_dense_qp *qp, struct s_dense_qp_seed *seed, struct s_dense_qp_sol *sens, struct s_dense_qp_ipm_arg *arg, struct s_dense_qp_ipm_ws *ws);
 //
 void s_dense_qp_compute_step_length(struct s_dense_qp *qp, struct s_dense_qp_sol *qp_sol, struct s_dense_qp_ipm_arg *arg, struct s_dense_qp_ipm_ws *ws);
 

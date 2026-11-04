@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -42,15 +20,9 @@ extern "C" {
 #include "acados/utils/types.h"
 #include "acados/sim/sim_common.h"
 
-#include "blasfeo/include/blasfeo_common.h"
-// #include "blasfeo/include/blasfeo_d_aux.h"
-// #include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
-// #include "blasfeo/include/blasfeo_d_blas.h"
-// #include "blasfeo/include/blasfeo_d_kernel.h"
-// #include "blasfeo/include/blasfeo_i_aux_ext_dep.h"
-// #include "blasfeo/include/blasfeo_target.h"
+#include "blasfeo_common.h"
 
-/* 
+/*
 GNSF - Generalized Nonlinear Static Feedback Model
 has the following form
 https://github.com/acados/acados/files/3359595/gnsf_structure_blo.pdf
@@ -314,9 +286,9 @@ typedef struct
     // struct blasfeo_dmat *Lxdot;
     // struct blasfeo_dmat *Lz;
 
-	double time_sim;
-	double time_ad;
-	double time_la;
+    double time_sim;
+    double time_ad;
+    double time_la;
 
 } sim_gnsf_memory;
 
@@ -350,6 +322,8 @@ int sim_gnsf_precompute(void *config_, sim_in *in, sim_out *out, void *opts_, vo
 acados_size_t sim_gnsf_workspace_calculate_size(void *config, void *dims_, void *args);
 acados_size_t sim_gnsf_memory_calculate_size(void *config, void *dims_, void *opts_);
 void *sim_gnsf_memory_assign(void *config, void *dims_, void *opts_, void *raw_memory);
+size_t sim_gnsf_get_external_fun_workspace_requirement(void *config_, void *dims_, void *opts_, void *model_);
+void sim_gnsf_set_external_fun_workspaces(void *config_, void *dims_, void *opts_, void *model_, void *workspace_);
 
 // interface
 void sim_gnsf_config_initialize_default(void *config_);

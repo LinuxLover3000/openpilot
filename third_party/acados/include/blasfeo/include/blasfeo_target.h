@@ -2,6 +2,10 @@
 #define TARGET_X64_INTEL_HASWELL
 #endif
 
+#ifndef TARGET_PHANTOM
+#define TARGET_PHANTOM
+#endif
+
 #ifndef TARGET_NEED_FEATURE_AVX2
 #define TARGET_NEED_FEATURE_AVX2 1
 #endif
@@ -47,6 +51,16 @@
 #define OFF 0
 #if ON==ON
 #define EXT_DEP
+#endif
+#undef ON
+#undef OFF
+#endif
+
+#ifndef EXT_DEP_MALLOC
+#define ON 1
+#define OFF 0
+#if ON==ON
+#define EXT_DEP_MALLOC
 #endif
 #undef ON
 #undef OFF

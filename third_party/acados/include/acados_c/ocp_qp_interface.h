@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -47,6 +25,7 @@ extern "C" {
 ///   PARTIAL_CONDENSING_HPMPC
 ///   PARTIAL_CONDENSING_OOQP
 ///   PARTIAL_CONDENSING_OSQP
+///   PARTIAL_CONDENSING_CLARABEL
 ///   PARTIAL_CONDENSING_QPDUNES
 ///   FULL_CONDENSING_HPIPM
 ///   FULL_CONDENSING_QPOASES
@@ -72,6 +51,11 @@ typedef enum {
     PARTIAL_CONDENSING_OSQP,
 #else
     PARTIAL_CONDENSING_OSQP_NOT_AVAILABLE,
+#endif
+#ifdef ACADOS_WITH_CLARABEL
+    PARTIAL_CONDENSING_CLARABEL,
+#else
+    PARTIAL_CONDENSING_CLARABEL_NOT_AVAILABLE,
 #endif
 #ifdef ACADOS_WITH_QPDUNES
     PARTIAL_CONDENSING_QPDUNES,
@@ -131,6 +115,9 @@ void ocp_qp_xcond_solver_config_initialize_from_plan(
 /// \param plan The qp solver plan struct.
 ocp_qp_xcond_solver_config *ocp_qp_xcond_solver_config_create(ocp_qp_solver_plan_t plan);
 
+
+ocp_qp_xcond_solver_config *ocp_qp_xcond_solver_config_create_from_name(const char *solver_name);
+
 /// Destructor for config struct, frees memory.
 ///
 /// \param config The config object to destroy.
@@ -141,6 +128,10 @@ void ocp_qp_xcond_solver_config_free(ocp_qp_xcond_solver_config *config);
 ///
 /// \param N The number of variables.
 ocp_qp_dims *ocp_qp_dims_create(int N);
+
+
+void ocp_qp_xcond_solver_dims_set(void *config_, ocp_qp_xcond_solver_dims *dims,
+                                  int stage, const char *field, int* value);
 
 /// Destructor of The dimension struct.
 ///
@@ -164,6 +155,8 @@ void ocp_qp_xcond_solver_dims_set(void *config_, ocp_qp_xcond_solver_dims *dims,
 /// \param dims The dimension struct.
 ocp_qp_in *ocp_qp_in_create(ocp_qp_dims *dims);
 
+ocp_qp_in *ocp_qp_in_create_from_xcond_dims(ocp_qp_xcond_solver_dims *dims);
+
 
 void ocp_qp_in_set(ocp_qp_xcond_solver_config *config, ocp_qp_in *in,
                    int stage, char *field, void *value);
@@ -179,6 +172,8 @@ void ocp_qp_in_free(void *in_);
 /// \param dims The dimension struct.
 ocp_qp_out *ocp_qp_out_create(ocp_qp_dims *dims);
 
+ocp_qp_out *ocp_qp_out_create_from_xcond_dims(ocp_qp_xcond_solver_dims *dims);
+
 /// Destructor of the output struct.
 ///
 /// \param out_ The output struct.
@@ -186,7 +181,7 @@ void ocp_qp_out_free(void *out_);
 
 
 /// Getter of output struct
-void ocp_qp_out_get(ocp_qp_out *out, const char *field, void *value);
+void ocp_qp_out_get(ocp_qp_out *out, int stage, const char *field, void *value);
 
 
 /// Constructs an options object for the qp.
@@ -229,6 +224,9 @@ ocp_qp_solver *ocp_qp_assign(ocp_qp_xcond_solver_config *config, ocp_qp_xcond_so
 ocp_qp_solver *ocp_qp_create(ocp_qp_xcond_solver_config *config,
                              ocp_qp_xcond_solver_dims *dims, void *opts_);
 
+void ocp_qp_xcond_solver_get_scalar(ocp_qp_solver *solver, ocp_qp_out *qp_out, const char *field, void* value);
+
+void ocp_qp_solver_get_stats(ocp_qp_solver *solver, void* value, const char * solver_name);
 
 /// Destroys a qp solver. Frees memory.
 ///

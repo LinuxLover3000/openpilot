@@ -64,16 +64,21 @@ struct s_tree_ocp_qcqp_ipm_arg
 	float res_b_max; // exit cond on inf norm of residuals
 	float res_d_max; // exit cond on inf norm of residuals
 	float res_m_max; // exit cond on inf norm of residuals
+	float dual_gap_max; // exit cond on duality gap
 	float reg_prim; // reg of primal hessian
 	float lam_min; // min value in lam vector
 	float t_min; // min value in t vector
+	float tau_min; // min value of barrier parameter
+	float lam0_min; // min value in lam vector at hot start initialization
+	float t0_min; // min value in t vector at hot start initialization
+	float m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int iter_max; // exit cond in iter number
 	int stat_max; // iterations saved in stat
 	int pred_corr; // use Mehrotra's predictor-corrector IPM algirthm
 	int cond_pred_corr; // conditional Mehrotra's predictor-corrector
 	int itref_pred_max; // max number of iterative refinement steps for predictor step
 	int itref_corr_max; // max number of iterative refinement steps for corrector step
-	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol
+	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol, 3 hot start
 //	int square_root_alg; // 0 classical Riccati, 1 square-root Riccati
 	int lq_fact; // 0 syrk+potrf, 1 mix, 2 lq (for square_root_alg==1)
 	int abs_form; // absolute IPM formulation
@@ -82,6 +87,7 @@ struct s_tree_ocp_qcqp_ipm_arg
 //	int comp_res_pred; // compute residuals of prediction
 	int split_step; // use different step for primal and dual variables
 	int t_lam_min; // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
+	int t0_init; // initialization scheme of slacks t (with corresponding multiplier lam=mu0/t): 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
 	int mode;
 	hpipm_size_t memsize;
 	};
@@ -127,6 +133,8 @@ void s_tree_ocp_qcqp_ipm_arg_set_tol_eq(float *value, struct s_tree_ocp_qcqp_ipm
 void s_tree_ocp_qcqp_ipm_arg_set_tol_ineq(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // set exit tolerance on complementarity condition
 void s_tree_ocp_qcqp_ipm_arg_set_tol_comp(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
+// set exit tolerance on duality gap
+void s_tree_ocp_qcqp_ipm_arg_set_tol_dual_gap(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // set regularization of primal variables
 void s_tree_ocp_qcqp_ipm_arg_set_reg_prim(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // set warm start: 0 no warm start, 1 primal var
@@ -145,8 +153,12 @@ void s_tree_ocp_qcqp_ipm_arg_set_comp_res_exit(int *value, struct s_tree_ocp_qcq
 void s_tree_ocp_qcqp_ipm_arg_set_lam_min(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // min value of t in the solution
 void s_tree_ocp_qcqp_ipm_arg_set_t_min(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
+// min value of barrier parameter
+void s_tree_ocp_qcqp_ipm_arg_set_tau_min(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // use different step for primal and dual variables
 void s_tree_ocp_qcqp_ipm_arg_set_split_step(int *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
+// in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
+void s_tree_ocp_qcqp_ipm_arg_set_m_safe(float *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
 void s_tree_ocp_qcqp_ipm_arg_set_t_lam_min(int *value, struct s_tree_ocp_qcqp_ipm_arg *arg);
 
@@ -170,6 +182,10 @@ void s_tree_ocp_qcqp_ipm_get_max_res_eq(struct s_tree_ocp_qcqp_ipm_ws *ws, float
 void s_tree_ocp_qcqp_ipm_get_max_res_ineq(struct s_tree_ocp_qcqp_ipm_ws *ws, float *res_ineq);
 //
 void s_tree_ocp_qcqp_ipm_get_max_res_comp(struct s_tree_ocp_qcqp_ipm_ws *ws, float *res_comp);
+//
+void s_tree_ocp_qcqp_ipm_get_dual_gap(struct s_tree_ocp_qcqp_ipm_ws *ws, float *dual_gap);
+//
+void s_tree_ocp_qcqp_ipm_get_obj(struct s_tree_ocp_qcqp_ipm_ws *ws, float *obj);
 //
 void s_tree_ocp_qcqp_ipm_get_stat(struct s_tree_ocp_qcqp_ipm_ws *ws, float **stat);
 //

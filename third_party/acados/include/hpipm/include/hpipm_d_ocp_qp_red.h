@@ -44,6 +44,7 @@
 #include <hpipm_d_ocp_qp_dim.h>
 #include <hpipm_d_ocp_qp.h>
 #include <hpipm_d_ocp_qp_sol.h>
+#include <hpipm_d_ocp_qp_seed.h>
 
 
 
@@ -86,13 +87,15 @@ void d_ocp_qp_reduce_eq_dof_arg_create(struct d_ocp_qp_reduce_eq_dof_arg *arg, v
 //
 void d_ocp_qp_reduce_eq_dof_arg_set_default(struct d_ocp_qp_reduce_eq_dof_arg *arg);
 //
-void d_ocp_qp_reduce_eq_dof_arg_set_alias_unchanged(struct d_ocp_qp_reduce_eq_dof_arg *arg, int value);
+void d_ocp_qp_reduce_eq_dof_arg_set_alias_unchanged(int *value, struct d_ocp_qp_reduce_eq_dof_arg *arg);
 //
-void d_ocp_qp_reduce_eq_dof_arg_set_comp_prim_sol(struct d_ocp_qp_reduce_eq_dof_arg *arg, int value);
+void d_ocp_qp_reduce_eq_dof_arg_set_comp_prim_sol(int *value, struct d_ocp_qp_reduce_eq_dof_arg *arg);
 //
-void d_ocp_qp_reduce_eq_dof_arg_set_comp_dual_sol_eq(struct d_ocp_qp_reduce_eq_dof_arg *arg, int value);
+void d_ocp_qp_reduce_eq_dof_arg_set_comp_dual_sol_eq(int *value, struct d_ocp_qp_reduce_eq_dof_arg *arg);
 //
-void d_ocp_qp_reduce_eq_dof_arg_set_comp_dual_sol_ineq(struct d_ocp_qp_reduce_eq_dof_arg *arg, int value);
+void d_ocp_qp_reduce_eq_dof_arg_set_comp_dual_sol_ineq(int *value, struct d_ocp_qp_reduce_eq_dof_arg *arg);
+//
+void d_ocp_qp_reduce_eq_dof_arg_deepcopy(struct d_ocp_qp_reduce_eq_dof_arg *arg_s, struct d_ocp_qp_reduce_eq_dof_arg *arg_d);
 //
 hpipm_size_t d_ocp_qp_reduce_eq_dof_ws_memsize(struct d_ocp_qp_dim *dim);
 //
@@ -104,7 +107,13 @@ void d_ocp_qp_reduce_eq_dof_lhs(struct d_ocp_qp *qp, struct d_ocp_qp *qp_red, st
 //
 void d_ocp_qp_reduce_eq_dof_rhs(struct d_ocp_qp *qp, struct d_ocp_qp *qp_red, struct d_ocp_qp_reduce_eq_dof_arg *arg, struct d_ocp_qp_reduce_eq_dof_ws *work);
 //
+void d_ocp_qp_reduce_eq_dof_seed(struct d_ocp_qp *qp, struct d_ocp_qp_seed *qp_seed, struct d_ocp_qp_seed *qp_seed_red, struct d_ocp_qp_reduce_eq_dof_arg *arg, struct d_ocp_qp_reduce_eq_dof_ws *work);
+//
 void d_ocp_qp_restore_eq_dof(struct d_ocp_qp *qp, struct d_ocp_qp_sol *qp_sol_red, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_reduce_eq_dof_arg *arg, struct d_ocp_qp_reduce_eq_dof_ws *work);
+//
+void d_ocp_qp_restore_eq_dof_seed(struct d_ocp_qp *qp, struct d_ocp_qp_seed *qp_seed, struct d_ocp_qp_sol *qp_sol_red, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_reduce_eq_dof_arg *arg, struct d_ocp_qp_reduce_eq_dof_ws *work);
+//
+void d_ocp_qp_reduce_eq_dof_sol(struct d_ocp_qp *qp, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_sol *qp_sol_red, struct d_ocp_qp_reduce_eq_dof_arg *arg, struct d_ocp_qp_reduce_eq_dof_ws *work);
 
 
 

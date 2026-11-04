@@ -64,10 +64,11 @@ struct s_core_qp_ipm_workspace
 	float *res_m_bkp; // m-residuals
 	float *Gamma; // Hessian update
 	float *gamma; // gradient update
+	float *m; //
 	float alpha_prim; // step length
 	float alpha_dual; // step length
 	float alpha; // step length
-	float sigma; // centering XXX
+	float sigma; // centering
 	float mu; // duality measuere
 	float mu_aff; // affine duality measuere
 	float nc_inv; // 1.0/nc, where nc is the total number of constraints
@@ -76,12 +77,15 @@ struct s_core_qp_ipm_workspace
 	float t_min; // min value in t vector
 	float t_min_inv; // inverse of min value in t vector
 	float tau_min; // min value of barrier parameter
+	float tau_iter; // target value of barrier parameter at last iteration
+	float m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int nv; // number of primal variables
 	int ne; // number of equality constraints
 	int nc; // (twice the) number of (two-sided) inequality constraints
 	int nc_mask; // total number of ineq constr after masking
 	int split_step; // use different step for primal and dual variables
 	int t_lam_min; // clip t and lam also in solution, or only in Gamma computation
+	int m_zero; // m is all zero
 	hpipm_size_t memsize; // memory size (in bytes) of workspace
 	};
 

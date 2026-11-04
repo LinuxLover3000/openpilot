@@ -1,0 +1,349 @@
+#
+# Copyright (c) The acados authors.
+#
+# This file is part of acados.
+#
+# Licensed under the 2-Clause BSD License.
+
+
+from dataclasses import dataclass
+from typing import List
+import numpy as np
+import json
+
+
+@dataclass
+class AcadosOcpFlattenedIterate:
+    """
+    This class is used to store the primal-dual iterate of an optimal control problem in a flattened form.
+    This allows faster interactions with the solver.
+    """
+    x: np.ndarray
+    u: np.ndarray
+    z: np.ndarray
+    sl: np.ndarray
+    su: np.ndarray
+    pi: np.ndarray
+    lam: np.ndarray
+
+    def allclose(self, other, rtol=1e-5, atol=1e-6) -> bool:
+        """Check whether two flattened iterates are numerically close."""
+        if not isinstance(other, AcadosOcpFlattenedIterate):
+            raise TypeError(f"Expected AcadosOcpFlattenedIterate, got {type(other)}")
+        return (
+            np.allclose(self.x, other.x, rtol=rtol, atol=atol) and
+            np.allclose(self.u, other.u, rtol=rtol, atol=atol) and
+            np.allclose(self.z, other.z, rtol=rtol, atol=atol) and
+            np.allclose(self.sl, other.sl, rtol=rtol, atol=atol) and
+            np.allclose(self.su, other.su, rtol=rtol, atol=atol) and
+            np.allclose(self.pi, other.pi, rtol=rtol, atol=atol) and
+            np.allclose(self.lam, other.lam, rtol=rtol, atol=atol)
+        )
+
+    def __add__(self, other):
+        """Add two flattened iterates elementwise."""
+        if not isinstance(other, AcadosOcpFlattenedIterate):
+            raise TypeError(f"Expected AcadosOcpFlattenedIterate, got {type(other)}")
+        return AcadosOcpFlattenedIterate(
+            x=self.x + other.x,
+            u=self.u + other.u,
+            z=self.z + other.z,
+            sl=self.sl + other.sl,
+            su=self.su + other.su,
+            pi=self.pi + other.pi,
+            lam=self.lam + other.lam
+        )
+
+    def __sub__(self, other):
+        """Subtract two flattened iterates elementwise."""
+        if not isinstance(other, AcadosOcpFlattenedIterate):
+            raise TypeError(f"Expected AcadosOcpFlattenedIterate, got {type(other)}")
+        return AcadosOcpFlattenedIterate(
+            x=self.x - other.x,
+            u=self.u - other.u,
+            z=self.z - other.z,
+            sl=self.sl - other.sl,
+            su=self.su - other.su,
+            pi=self.pi - other.pi,
+            lam=self.lam - other.lam
+        )
+
+    def inf_norm(self) -> float:
+        """
+        Returns the infinity norm of the iterate, which is the maximum absolute value of its elements.
+        """
+        return np.max(np.abs(np.concatenate((self.x, self.u, self.z, self.sl, self.su, self.pi, self.lam))))
+
+    def primal_dual_inf_norm(self):
+        """Return separate infinity norms for primal and dual variables."""
+        primal_inf_norm = np.max(np.abs(np.concatenate((self.x, self.u, self.z, self.sl, self.su))), initial=0)
+        dual_inf_norm = np.max(np.abs(np.concatenate((self.pi, self.lam))), initial=0)
+        return primal_inf_norm, dual_inf_norm
+
+    def __str__(self) -> str:
+        return self.to_string()
+
+    def to_string(self, precision=6, suppress_small=True) -> str:
+        """Return a readable representation of the flattened iterate."""
+        fields = ('x', 'u', 'z', 'sl', 'su', 'pi', 'lam')
+        lines = [f"{type(self).__name__}:"]
+
+        for field in fields:
+            formatted = np.array2string(
+                np.asarray(getattr(self, field)),
+                precision=precision,
+                suppress_small=suppress_small,
+            )
+            lines.append(f"  {field}: {formatted}")
+
+        return '\n\n'.join(lines)
+
+
+@dataclass
+class AcadosOcpFlattenedBatchIterate:
+    """
+    Similar to :py:class:`~acados_template.acados_ocp.AcadosOcpFlattenedIterate` but with an additional field N_batch.
+    The fields x, u, z, sl, su, pi, lam are of shape (N_batch, nx_total), (N_batch, nu_total), etc.
+    """
+    x: np.ndarray # shape (N_batch, nx_total)
+    u: np.ndarray # shape (N_batch, nu_total)
+    z: np.ndarray
+    sl: np.ndarray
+    su: np.ndarray
+    pi: np.ndarray
+    lam: np.ndarray
+    N_batch: int
+
+    def __getitem__(self, idx) -> AcadosOcpFlattenedIterate:
+        """Return one flattened iterate from the batch."""
+        if isinstance(idx, int):
+            return AcadosOcpFlattenedIterate(
+                x=self.x[idx],
+                u=self.u[idx],
+                z=self.z[idx],
+                sl=self.sl[idx],
+                su=self.su[idx],
+                pi=self.pi[idx],
+                lam=self.lam[idx],
+            )
+        else:
+            raise ValueError("Getitem of batch iterates only supported for single indices.")
+
+    def __setitem__(self, idx, value: AcadosOcpFlattenedIterate):
+        """Replace one flattened iterate in the batch."""
+        self.x[idx] = value.x
+        self.u[idx] = value.u
+        self.z[idx] = value.z
+        self.sl[idx] = value.sl
+        self.su[idx] = value.su
+        self.pi[idx] = value.pi
+        self.lam[idx] = value.lam
+
+
+@dataclass
+class AcadosOcpIterate:
+    """
+    This class is used to store the primal-dual iterate of an optimal control problem.
+    """
+    x: List[np.ndarray]
+    u: List[np.ndarray]
+    z: List[np.ndarray]
+    sl: List[np.ndarray]
+    su: List[np.ndarray]
+    pi: List[np.ndarray]
+    lam: List[np.ndarray]
+
+    def flatten(self) -> AcadosOcpFlattenedIterate:
+        """Concatenate stage-wise data into one flattened iterate."""
+        return AcadosOcpFlattenedIterate(
+            x=np.concatenate(self.x),
+            u=np.concatenate(self.u) if len(self.u) > 0 else np.array([]),
+            z=np.concatenate(self.z) if len(self.z) > 0 else np.array([]),
+            sl=np.concatenate(self.sl),
+            su=np.concatenate(self.su),
+            pi=np.concatenate(self.pi) if len(self.pi) > 0 else np.array([]),
+            lam=np.concatenate(self.lam),
+        )
+
+    def allclose(self, other, rtol=1e-5, atol=1e-8) -> bool:
+        """Check whether two stage-wise iterates are numerically close."""
+        if not isinstance(other, AcadosOcpIterate):
+            raise TypeError(f"Expected AcadosOcpIterate, got {type(other)}")
+        s = self.flatten()
+        o = other.flatten()
+        return s.allclose(o, rtol=rtol, atol=atol)
+
+
+    def __sub__(self, other):
+        """Subtract two stage-wise iterates elementwise."""
+        if not isinstance(other, AcadosOcpIterate):
+            raise TypeError(f"Expected AcadosOcpIterate, got {type(other)}")
+        return AcadosOcpIterate(
+            x=[self.x[n] - other.x[n] for n in range(len(self.x))],
+            u=[self.u[n] - other.u[n] for n in range(len(self.u))],
+            z=[self.z[n] - other.z[n] for n in range(len(self.z))],
+            sl=[self.sl[n] - other.sl[n] for n in range(len(self.sl))],
+            su=[self.su[n] - other.su[n] for n in range(len(self.su))],
+            pi=[self.pi[n] - other.pi[n] for n in range(len(self.pi))],
+            lam=[self.lam[n] - other.lam[n] for n in range(len(self.lam))],
+        )
+
+    def inf_norm_iterate(self):
+        """Return per-stage infinity norms as a flattened iterate."""
+        return AcadosOcpFlattenedIterate(
+            x = np.array([np.max(np.abs(xn), initial=0).item() for xn in self.x]),
+            u = np.array([np.max(np.abs(un), initial=0).item() for un in self.u]),
+            z = np.array([np.max(np.abs(zn), initial=0).item() for zn in self.z]),
+            sl = np.array([np.max(np.abs(sln), initial=0).item() for sln in self.sl]),
+            su = np.array([np.max(np.abs(sun), initial=0).item() for sun in self.su]),
+            pi = np.array([np.max(np.abs(pin), initial=0).item() for pin in self.pi]),
+            lam = np.array([np.max(np.abs(lamn), initial=0).item() for lamn in self.lam]),
+        )
+
+    def primal_dual_inf_norm(self):
+        """Return separate infinity norms for primal and dual variables."""
+        return self.flatten().primal_dual_inf_norm()
+
+    def __str__(self) -> str:
+        """Return a readable representation of the iterate."""
+        return self.to_string()
+
+    def to_string(self, precision=6, suppress_small=True) -> str:
+        """Return a readable stage-wise representation of the iterate."""
+        fields = ('x', 'u', 'z', 'sl', 'su', 'pi', 'lam')
+        lines = [f"{type(self).__name__}:"]
+
+        for stage in range(len(self.x)):
+            lines.append(f"  stage {stage}:")
+            for field in fields:
+                values = getattr(self, field)
+                value = values[stage] if stage < len(values) else np.array([])
+                formatted = np.array2string(
+                    np.asarray(value),
+                    precision=precision,
+                    suppress_small=suppress_small,
+                )
+                lines.append(f"    {field}: {formatted}")
+
+        return '\n\n'.join(lines)
+
+
+    @classmethod
+    def from_json(cls, filename=None, json_data=None) -> 'AcadosOcpIterate':
+        """
+        Create an AcadosOcpIterate instance from a JSON file.
+
+        Compatible with the format used by AcadosOcpSolver.store_iterate().
+
+        Args:
+            filename: Path to JSON file containing iterate data
+            json_data: Optional dictionary containing iterate data. If provided, this will be used instead of reading from file.
+
+        Returns:
+            AcadosOcpIterate: New instance with data from JSON file
+        """
+        if json_data is not None:
+            data = json_data
+        elif filename is not None:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+        else:
+            raise ValueError("Either filename or json_data must be provided to from_json.")
+
+        # Initialize storage for each field
+        fields = {}
+        for field_name in ['x', 'u', 'z', 'sl', 'su', 'pi', 'lam']:
+            fields[field_name] = []
+
+        # Find the maximum stage number to determine N
+        max_stage = 0
+        for key in data.keys():
+            if '_' in key:
+                field, stage_str = key.split('_', 1)
+                if field in fields:
+                    stage = int(stage_str)
+                    max_stage = max(max_stage, stage)
+
+        N = max_stage  # N is the maximum stage index
+
+        # Extract data for each stage and field
+        for stage in range(N + 1):
+            # Determine zero-padding length from the keys
+            stage_key_length = len([k for k in data.keys() if '_' in k][0].split('_')[1])
+            stage_str = f'{stage:0{stage_key_length}d}'
+
+            for field_name in ['x', 'u', 'z', 'sl', 'su', 'pi', 'lam']:
+                key = f'{field_name}_{stage_str}'
+                if key in data:
+                    fields[field_name].append(np.array(data[key]))
+                elif stage < N or field_name in ['x', 'sl', 'su', 'lam']:
+                    # For missing data, append empty array if expected
+                    fields[field_name].append(np.array([]))
+
+        return cls(**fields)
+
+    def to_json(self, indent=4, sort_keys=True):
+        """
+        Convert the iterate to JSON format compatible with AcadosOcpSolver.store_iterate().
+
+        Args:
+            indent: JSON indentation for pretty printing
+            sort_keys: Whether to sort keys in output
+
+        Returns:
+            str: JSON string representation
+        """
+        solution = {}
+
+        # Determine N from trajectory lengths
+        N = len(self.x) - 1
+
+        # Determine zero-padding length
+        lN = len(str(N + 1))
+
+        # Store each field with stage indexing
+        for stage in range(N + 1):
+            stage_str = f'{stage:0{lN}d}'
+
+            # Store x, sl, su, lam for all stages (0 to N)
+            for field_name in ['x', 'sl', 'su', 'lam']:
+                field_data = getattr(self, field_name)
+                if stage < len(field_data) and len(field_data[stage]) > 0:
+                    solution[f'{field_name}_{stage_str}'] = field_data[stage].tolist()
+
+            # Store u, z, pi only for stages 0 to N-1
+            if stage < N:
+                for field_name in ['u', 'z', 'pi']:
+                    field_data = getattr(self, field_name)
+                    if stage < len(field_data) and len(field_data[stage]) > 0:
+                        solution[f'{field_name}_{stage_str}'] = field_data[stage].tolist()
+
+        return json.dumps(solution, indent=indent, sort_keys=sort_keys)
+
+
+@dataclass
+class AcadosOcpIterates:
+    """
+    This class is used to store a list of :py:class:`~acados_template.acados_ocp.AcadosOcpIterate` objects.
+    """
+
+    iterate_list: List[AcadosOcpIterate]
+    __iterate_fields = ("x", "u", "z", "sl", "su", "pi", "lam")
+
+    def as_array(self, field: str, ) -> np.ndarray:
+        """
+        Returns the iterate given by field as a numpy array of shape (nlp_iter+1, N_horizon (+ 1), n_field).
+        This will fail if the dimension of value `field` is varying stagewise.
+        """
+
+        if field not in self.__iterate_fields:
+            raise ValueError(f"Invalid field: got {field}, expected value in {self.__iterate_fields}")
+
+        traj_ = [getattr(iterate, field) for iterate in self.iterate_list]
+
+        try:
+            traj = np.array(traj_, dtype=float)
+        except ValueError:
+            raise ValueError(f"Stage-wise dimensions are not the same for {field} trajectory.")
+
+        return traj

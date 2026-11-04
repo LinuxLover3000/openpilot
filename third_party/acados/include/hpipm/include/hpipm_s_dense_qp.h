@@ -66,7 +66,7 @@ struct s_dense_qp
 	struct blasfeo_svec *m; // rhs of complementarity condition
 	struct blasfeo_svec *Z; // (diagonal) hessian of slacks
 	int *idxb; // indices of box constrained variables within [u; x]
-	int *idxs_rev; // index of soft constraints (reverse storage)
+	int *idxs_rev; // index of slack softening each constraint
 	hpipm_size_t memsize; // memory size in bytes
 	};
 
@@ -76,12 +76,16 @@ struct s_dense_qp
 hpipm_size_t s_dense_qp_memsize(struct s_dense_qp_dim *dim);
 //
 void s_dense_qp_create(struct s_dense_qp_dim *dim, struct s_dense_qp *qp, void *memory);
+//
+void s_dense_qp_copy_all(struct s_dense_qp *qp_orig, struct s_dense_qp *qp_dest);
+//
+void s_dense_qp_set_all_zero(struct s_dense_qp *qp);
+//
+void s_dense_qp_set_rhs_zero(struct s_dense_qp *qp);
 
 // setters - colmaj
-//
-void s_dense_qp_set_all(float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, float *d_ls, float *d_us, struct s_dense_qp *qp);
-//
-void s_dense_qp_get_all(struct s_dense_qp *qp, float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, float *d_ls, float *d_us);
+// sets the most common fields of a QP; matrices are in the default column-major format
+void s_dense_qp_set_all(float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, int *idxs_rev, float *d_ls, float *d_us, struct s_dense_qp *qp);
 //
 void s_dense_qp_set(char *field, void *value, struct s_dense_qp *qp);
 //
@@ -131,15 +135,31 @@ void s_dense_qp_set_zl(float *zl, struct s_dense_qp *qp);
 //
 void s_dense_qp_set_zu(float *zu, struct s_dense_qp *qp);
 //
-void s_dense_qp_set_ls(float *ls, struct s_dense_qp *qp);
+void s_dense_qp_set_lls(float *ls, struct s_dense_qp *qp);
 //
-void s_dense_qp_set_ls_mask(float *ls, struct s_dense_qp *qp);
+void s_dense_qp_set_lls_mask(float *ls, struct s_dense_qp *qp);
 //
-void s_dense_qp_set_us(float *us, struct s_dense_qp *qp);
+void s_dense_qp_set_lus(float *us, struct s_dense_qp *qp);
 //
-void s_dense_qp_set_us_mask(float *us, struct s_dense_qp *qp);
+void s_dense_qp_set_lus_mask(float *us, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_all(float *m, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_lb(float *lb, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_ub(float *ub, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_lg(float *lg, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_ug(float *ug, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_lls(float *ls, struct s_dense_qp *qp);
+//
+void s_dense_qp_set_m_lus(float *us, struct s_dense_qp *qp);
 
 // getters - colmaj
+// gets the most common fields of a QP; matrices are in the default column-major format
+void s_dense_qp_get_all(struct s_dense_qp *qp, float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, int *idxs_rev, float *d_ls, float *d_us);
 //
 void s_dense_qp_get_H(struct s_dense_qp *qp, float *H);
 //
@@ -190,12 +210,12 @@ void s_dense_qp_get_us(struct s_dense_qp *qp, float *us);
 void s_dense_qp_get_us_mask(struct s_dense_qp *qp, float *us);
 
 // setters - rowmaj
-//
-void s_dense_qp_set_all_rowmaj(float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, float *d_ls, float *d_us, struct s_dense_qp *qp);
+// sets the most common fields of a QP; matrices are in row-major format
+void s_dense_qp_set_all_rowmaj(float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, int *idxs_rev, float *d_ls, float *d_us, struct s_dense_qp *qp);
 
 // getters - rowmaj
-//
-void s_dense_qp_get_all_rowmaj(struct s_dense_qp *qp, float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, float *d_ls, float *d_us);
+// gets the most common fields of a QP; matrices are in row-major format
+void s_dense_qp_get_all_rowmaj(struct s_dense_qp *qp, float *H, float *g, float *A, float *b, int *idxb, float *d_lb, float *d_ub, float *C, float *d_lg, float *d_ug, float *Zl, float *Zu, float *zl, float *zu, int *idxs, int *idxs_rev, float *d_ls, float *d_us);
 
 
 #ifdef __cplusplus

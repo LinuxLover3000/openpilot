@@ -61,7 +61,10 @@ struct s_dense_qp_res
 	struct blasfeo_svec *res_d; // d-residuals
 	struct blasfeo_svec *res_m; // m-residuals
 	float res_max[4]; // max of residuals
-	float res_mu; // mu-residual
+	float res_mu_sum; // sum of res_m
+	float res_mu; // mu-residual = res_mu_sum / #constr
+	float obj; // (primal) objective
+	float dual_gap; // duality gap
 	hpipm_size_t memsize;
 	};
 
@@ -71,6 +74,10 @@ struct s_dense_qp_res_ws
 	{
 	struct blasfeo_svec *tmp_nbg; // work space of size nbM+ngM
 	struct blasfeo_svec *tmp_ns; // work space of size nsM
+	struct blasfeo_svec *tmp_lam_mask; // workspace of size 2*nbM+2*ngM+2*nsM
+	float nc_mask_inv; // reciprocal of number of non-masked constraints
+	int valid_nc_mask; // signal that there mask_constr and nc_mask_inv are valid
+	int mask_constr; // signal that there are some masked constraints
 	hpipm_size_t memsize;
 	};
 

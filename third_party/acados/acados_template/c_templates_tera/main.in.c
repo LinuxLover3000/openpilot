@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 {%- if not solver_options.custom_update_filename %}
@@ -42,71 +20,43 @@
 #include "acados/utils/math.h"
 #include "acados_c/ocp_nlp_interface.h"
 #include "acados_c/external_function_interface.h"
-#include "acados_solver_{{ model.name }}.h"
+#include "acados_solver_{{ name }}.h"
 
 // blasfeo
-#include "blasfeo/include/blasfeo_d_aux_ext_dep.h"
+#include "blasfeo_d_aux_ext_dep.h"
 
-#define NX     {{ model.name | upper }}_NX
-#define NZ     {{ model.name | upper }}_NZ
-#define NU     {{ model.name | upper }}_NU
-#define NP     {{ model.name | upper }}_NP
-#define NBX    {{ model.name | upper }}_NBX
-#define NBX0   {{ model.name | upper }}_NBX0
-#define NBU    {{ model.name | upper }}_NBU
-#define NSBX   {{ model.name | upper }}_NSBX
-#define NSBU   {{ model.name | upper }}_NSBU
-#define NSH    {{ model.name | upper }}_NSH
-#define NSG    {{ model.name | upper }}_NSG
-#define NSPHI  {{ model.name | upper }}_NSPHI
-#define NSHN   {{ model.name | upper }}_NSHN
-#define NSGN   {{ model.name | upper }}_NSGN
-#define NSPHIN {{ model.name | upper }}_NSPHIN
-#define NSBXN  {{ model.name | upper }}_NSBXN
-#define NS     {{ model.name | upper }}_NS
-#define NSN    {{ model.name | upper }}_NSN
-#define NG     {{ model.name | upper }}_NG
-#define NBXN   {{ model.name | upper }}_NBXN
-#define NGN    {{ model.name | upper }}_NGN
-#define NY0    {{ model.name | upper }}_NY0
-#define NY     {{ model.name | upper }}_NY
-#define NYN    {{ model.name | upper }}_NYN
-#define NH     {{ model.name | upper }}_NH
-#define NPHI   {{ model.name | upper }}_NPHI
-#define NHN    {{ model.name | upper }}_NHN
-#define NPHIN  {{ model.name | upper }}_NPHIN
-#define NR     {{ model.name | upper }}_NR
+#define NX     {{ name | upper }}_NX
+#define NP     {{ name | upper }}_NP
+#define NU     {{ name | upper }}_NU
+#define NBX0   {{ name | upper }}_NBX0
+#define NP_GLOBAL   {{ name | upper }}_NP_GLOBAL
 
 
 int main()
 {
 
-    {{ model.name }}_solver_capsule *acados_ocp_capsule = {{ model.name }}_acados_create_capsule();
+    {{ name }}_solver_capsule *acados_ocp_capsule = {{ name }}_acados_create_capsule();
     // there is an opportunity to change the number of shooting intervals in C without new code generation
-    int N = {{ model.name | upper }}_N;
+    int N = {{ name | upper }}_N;
     // allocate the array and fill it accordingly
     double* new_time_steps = NULL;
-    int status = {{ model.name }}_acados_create_with_discretization(acados_ocp_capsule, N, new_time_steps);
+    int status = {{ name }}_acados_create_with_discretization(acados_ocp_capsule, N, new_time_steps);
 
     if (status)
     {
-        printf("{{ model.name }}_acados_create() returned status %d. Exiting.\n", status);
+        printf("{{ name }}_acados_create() returned status %d. Exiting.\n", status);
         exit(1);
     }
 
-    ocp_nlp_config *nlp_config = {{ model.name }}_acados_get_nlp_config(acados_ocp_capsule);
-    ocp_nlp_dims *nlp_dims = {{ model.name }}_acados_get_nlp_dims(acados_ocp_capsule);
-    ocp_nlp_in *nlp_in = {{ model.name }}_acados_get_nlp_in(acados_ocp_capsule);
-    ocp_nlp_out *nlp_out = {{ model.name }}_acados_get_nlp_out(acados_ocp_capsule);
-    ocp_nlp_solver *nlp_solver = {{ model.name }}_acados_get_nlp_solver(acados_ocp_capsule);
-    void *nlp_opts = {{ model.name }}_acados_get_nlp_opts(acados_ocp_capsule);
+    ocp_nlp_config *nlp_config = {{ name }}_acados_get_nlp_config(acados_ocp_capsule);
+    ocp_nlp_dims *nlp_dims = {{ name }}_acados_get_nlp_dims(acados_ocp_capsule);
+    ocp_nlp_in *nlp_in = {{ name }}_acados_get_nlp_in(acados_ocp_capsule);
+    ocp_nlp_out *nlp_out = {{ name }}_acados_get_nlp_out(acados_ocp_capsule);
+    ocp_nlp_solver *nlp_solver = {{ name }}_acados_get_nlp_solver(acados_ocp_capsule);
+    void *nlp_opts = {{ name }}_acados_get_nlp_opts(acados_ocp_capsule);
 
+{%- if dims.nbx_0 > 0 %}
     // initial condition
-    int idxbx0[NBX0];
-    {%- for i in range(end=dims.nbx_0) %}
-    idxbx0[{{ i }}] = {{ constraints.idxbx_0[i] }};
-    {%- endfor %}
-
     double lbx0[NBX0];
     double ubx0[NBX0];
     {%- for i in range(end=dims.nbx_0) %}
@@ -114,9 +64,9 @@ int main()
     ubx0[{{ i }}] = {{ constraints.ubx_0[i] }};
     {%- endfor %}
 
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "idxbx", idxbx0);
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "lbx", lbx0);
-    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, 0, "ubx", ubx0);
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, nlp_out, 0, "lbx", lbx0);
+    ocp_nlp_constraints_model_set(nlp_config, nlp_dims, nlp_in, nlp_out, 0, "ubx", ubx0);
+{%- endif %}
 
     // initialization for state values
     double x_init[NX];
@@ -130,20 +80,6 @@ int main()
     u0[{{ i }}] = 0.0;
     {%- endfor %}
 
-
-  {%- if dims.np > 0 %}
-    // set parameters
-    double p[NP];
-    {%- for item in parameter_values %}
-    p[{{ loop.index0 }}] = {{ item }};
-    {%- endfor %}
-
-    for (int ii = 0; ii <= N; ii++)
-    {
-        {{ model.name }}_acados_update_params(acados_ocp_capsule, ii, p, NP);
-    }
-  {% endif %}{# if np > 0 #}
-
     // prepare evaluation
     int NTIMINGS = 1;
     double min_time = 1e12;
@@ -154,22 +90,18 @@ int main()
     double xtraj[NX * (N+1)];
     double utraj[NU * N];
 
-
     // solve ocp in loop
-    int rti_phase = 0;
-
     for (int ii = 0; ii < NTIMINGS; ii++)
     {
         // initialize solution
         for (int i = 0; i < N; i++)
         {
-            ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "x", x_init);
-            ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, i, "u", u0);
+            ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, nlp_in, i, "x", x_init);
+            ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, nlp_in, i, "u", u0);
         }
-        ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, N, "x", x_init);
-        ocp_nlp_solver_opts_set(nlp_config, nlp_opts, "rti_phase", &rti_phase);
-        status = {{ model.name }}_acados_solve(acados_ocp_capsule);
-        ocp_nlp_get(nlp_config, nlp_solver, "time_tot", &elapsed_time);
+        ocp_nlp_out_set(nlp_config, nlp_dims, nlp_out, nlp_in, N, "x", x_init);
+        status = {{ name }}_acados_solve(acados_ocp_capsule);
+        ocp_nlp_get(nlp_solver, "time_tot", &elapsed_time);
         min_time = MIN(elapsed_time, min_time);
     }
 
@@ -183,43 +115,52 @@ int main()
     d_print_exp_tran_mat( NX, N+1, xtraj, NX);
     printf("\n--- utraj ---\n");
     d_print_exp_tran_mat( NU, N, utraj, NU );
-    // ocp_nlp_out_print(nlp_solver->dims, nlp_out);
+    // print_ocp_nlp_out(nlp_solver->dims, nlp_out);
 
     printf("\nsolved ocp %d times, solution printed above\n\n", NTIMINGS);
 
     if (status == ACADOS_SUCCESS)
     {
-        printf("{{ model.name }}_acados_solve(): SUCCESS!\n");
+        printf("{{ name }}_acados_solve(): SUCCESS!\n");
     }
     else
     {
-        printf("{{ model.name }}_acados_solve() failed with status %d.\n", status);
+        printf("{{ name }}_acados_solve() failed with status %d.\n", status);
     }
 
 
 {%- if custom_update_filename != "" %}
-    {{ model.name }}_acados_custom_update(acados_ocp_capsule, xtraj, NX*(N+1));
+    {{ name }}_acados_custom_update(acados_ocp_capsule, xtraj, NX*(N+1));
 {%- endif %}
 
     // get solution
     ocp_nlp_out_get(nlp_config, nlp_dims, nlp_out, 0, "kkt_norm_inf", &kkt_norm_inf);
-    ocp_nlp_get(nlp_config, nlp_solver, "sqp_iter", &sqp_iter);
+    ocp_nlp_get(nlp_solver, "sqp_iter", &sqp_iter);
 
-    {{ model.name }}_acados_print_stats(acados_ocp_capsule);
+    {{ name }}_acados_print_stats(acados_ocp_capsule);
 
     printf("\nSolver info:\n");
     printf(" SQP iterations %2d\n minimum time for %d solve %f [ms]\n KKT %e\n",
            sqp_iter, NTIMINGS, min_time*1000, kkt_norm_inf);
 
+{% if code_gen_options.with_solution_sens_wrt_params_adj %}
+    // evaluate adjoint solution sensitivities wrt p_global
+    ocp_nlp_out *sens_out = {{ name }}_acados_get_sens_out(acados_ocp_capsule);
+    ocp_nlp_out_set_values_to_zero(nlp_config, nlp_dims, sens_out);
+    double tmp_p_global[NP_GLOBAL];
+    ocp_nlp_eval_solution_sens_adj_p(nlp_solver, nlp_in, sens_out, "p_global", 0, tmp_p_global);
+    printf("\nSucessfully evaluated adjoint solution sensitivities wrt p_global.\n");
+{%- endif %}
+
     // free solver
-    status = {{ model.name }}_acados_free(acados_ocp_capsule);
+    status = {{ name }}_acados_free(acados_ocp_capsule);
     if (status) {
-        printf("{{ model.name }}_acados_free() returned status %d. \n", status);
+        printf("{{ name }}_acados_free() returned status %d. \n", status);
     }
     // free solver capsule
-    status = {{ model.name }}_acados_free_capsule(acados_ocp_capsule);
+    status = {{ name }}_acados_free_capsule(acados_ocp_capsule);
     if (status) {
-        printf("{{ model.name }}_acados_free_capsule() returned status %d. \n", status);
+        printf("{{ name }}_acados_free_capsule() returned status %d. \n", status);
     }
 
     return status;
