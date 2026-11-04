@@ -46,6 +46,7 @@
 #include <hpipm_d_ocp_qp.h>
 #include <hpipm_d_ocp_qp_res.h>
 #include <hpipm_d_ocp_qp_sol.h>
+#include <hpipm_d_ocp_qp_seed.h>
 
 
 
@@ -57,23 +58,28 @@ extern "C" {
 
 struct d_ocp_qp_ipm_arg
 	{
+	struct d_ocp_qp_dim *dim;
 	double mu0; // initial value for complementarity slackness
 	double alpha_min; // exit cond on step length
 	double res_g_max; // exit cond on inf norm of residuals
 	double res_b_max; // exit cond on inf norm of residuals
 	double res_d_max; // exit cond on inf norm of residuals
 	double res_m_max; // exit cond on inf norm of residuals
+	double dual_gap_max; // exit cond on duality gap
 	double reg_prim; // reg of primal hessian
 	double lam_min; // min value in lam vector
 	double t_min; // min value in t vector
 	double tau_min; // min value of barrier parameter
+	double lam0_min; // min value in lam vector at hot start initialization
+	double t0_min; // min value in t vector at hot start initialization
+	double m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int iter_max; // exit cond in iter number
 	int stat_max; // iterations saved in stat
 	int pred_corr; // use Mehrotra's predictor-corrector IPM algirthm
 	int cond_pred_corr; // conditional Mehrotra's predictor-corrector
 	int itref_pred_max; // max number of iterative refinement steps for predictor step
 	int itref_corr_max; // max number of iterative refinement steps for corrector step
-	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol
+	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol, 3 hot start
 	int square_root_alg; // 0 classical Riccati, 1 square-root Riccati
 	int lq_fact; // 0 syrk+potrf, 1 mix, 2 lq (for square_root_alg==1)
 	int abs_form; // absolute IPM formulation
@@ -83,6 +89,8 @@ struct d_ocp_qp_ipm_arg
 	int split_step; // use different steps for primal and dual variables
 	int var_init_scheme; // variables initialization scheme
 	int t_lam_min; // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
+	int t0_init; // initialization scheme of slacks t (with corresponding multiplier lam=mu0/t): 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
+	int update_fact_exit; // provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
 	int mode;
 	hpipm_size_t memsize;
 	};
@@ -92,6 +100,7 @@ struct d_ocp_qp_ipm_arg
 struct d_ocp_qp_ipm_ws
 	{
 	double qp_res[4]; // infinity norm of residuals
+	double preg_last;
 	struct d_core_qp_ipm_workspace *core_workspace;
 	struct d_ocp_qp_dim *dim; // cache dim
 	struct d_ocp_qp_res_ws *res_workspace;
@@ -105,7 +114,6 @@ struct d_ocp_qp_ipm_ws
 	struct blasfeo_dvec *gamma; // hessian update
 	struct blasfeo_dvec *tmp_nuxM; // work space of size nxM
 	struct blasfeo_dvec *tmp_nbgM; // work space of size nbM+ngM
-	struct blasfeo_dvec *tmp_nsM; // work space of size nsM
 	struct blasfeo_dvec *Pb; // Pb
 	struct blasfeo_dvec *Zs_inv;
 	struct blasfeo_dvec *tmp_m;
@@ -116,8 +124,11 @@ struct d_ocp_qp_ipm_ws
 	struct blasfeo_dmat *Lh;
 	struct blasfeo_dmat *AL;
 	struct blasfeo_dmat *lq0;
-	struct blasfeo_dmat *tmp_nxM_nxM;
+	struct blasfeo_dmat *tmp_nuxM_nuxM;
 	double *stat; // convergence statistics
+	//double *eig_V;
+	//double *eig_d;
+	//double *eig_e;
 	int *use_hess_fact;
 	void *lq_work0;
 	int iter; // iteration number
@@ -125,11 +136,15 @@ struct d_ocp_qp_ipm_ws
 	int stat_m; // number of recorded stat per IPM iter
 	int use_Pb;
 	int status; // solver status
-	int square_root_alg; // cache from arg
+	//int square_root_alg; // cache from arg XXX not needed any more since ws won't depend on it
+	int last_square_root_alg; // actual square root alg at last iter
 	int lq_fact; // cache from arg
+	int last_lq_fact; // actual lq fact at last iter
 	int mask_constr; // use constr mask
 	int valid_ric_vec; // meaningful riccati vectors
 	int valid_ric_p; // form of riccati p: 0 p*inv(L), 1 p
+	int npd_reg_hess; // at last iter, hessian has been regularized to get positive (semi) definite
+	int npd_hess; // can be used to signal that hessian has been found to be not positive definite
 	hpipm_size_t memsize;
 	};
 
@@ -159,8 +174,10 @@ void d_ocp_qp_ipm_arg_set_tol_eq(double *tol_eq, struct d_ocp_qp_ipm_arg *arg);
 void d_ocp_qp_ipm_arg_set_tol_ineq(double *tol_ineq, struct d_ocp_qp_ipm_arg *arg);
 // set exit tolerance on complementarity condition
 void d_ocp_qp_ipm_arg_set_tol_comp(double *tol_comp, struct d_ocp_qp_ipm_arg *arg);
+// set exit tolerance on dual gap
+void d_ocp_qp_ipm_arg_set_tol_dual_gap(double *tol_dual_gap, struct d_ocp_qp_ipm_arg *arg);
 // set regularization of primal variables
-void d_ocp_qp_ipm_arg_set_reg_prim(double *tol_comp, struct d_ocp_qp_ipm_arg *arg);
+void d_ocp_qp_ipm_arg_set_reg_prim(double *reg_prim, struct d_ocp_qp_ipm_arg *arg);
 // set warm start: 0 no warm start, 1 primal var
 void d_ocp_qp_ipm_arg_set_warm_start(int *warm_start, struct d_ocp_qp_ipm_arg *arg);
 // Mehrotra's predictor-corrector IPM algorithm: 0 no predictor-corrector, 1 use predictor-corrector
@@ -181,12 +198,30 @@ void d_ocp_qp_ipm_arg_set_lam_min(double *value, struct d_ocp_qp_ipm_arg *arg);
 void d_ocp_qp_ipm_arg_set_t_min(double *value, struct d_ocp_qp_ipm_arg *arg);
 // min value of tau in the solution
 void d_ocp_qp_ipm_arg_set_tau_min(double *value, struct d_ocp_qp_ipm_arg *arg);
+// min value of lam in the hot start initialization
+void d_ocp_qp_ipm_arg_set_lam0_min(double *value, struct d_ocp_qp_ipm_arg *arg);
+// min value of t in the hot start initialization
+void d_ocp_qp_ipm_arg_set_t0_min(double *value, struct d_ocp_qp_ipm_arg *arg);
 // set split step: 0 same step, 1 different step for primal and dual variables
 void d_ocp_qp_ipm_arg_set_split_step(int *value, struct d_ocp_qp_ipm_arg *arg);
+// in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
+void d_ocp_qp_ipm_arg_set_m_safe(double *value, struct d_ocp_qp_ipm_arg *arg);
 // variables initialization scheme
 void d_ocp_qp_ipm_arg_set_var_init_scheme(int *value, struct d_ocp_qp_ipm_arg *arg);
 // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
 void d_ocp_qp_ipm_arg_set_t_lam_min(int *value, struct d_ocp_qp_ipm_arg *arg);
+// initialization scheme of lambda and t slacks: 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
+void d_ocp_qp_ipm_arg_set_t0_init(int *value, struct d_ocp_qp_ipm_arg *arg);
+// provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
+void d_ocp_qp_ipm_arg_set_update_fact_exit(int *value, struct d_ocp_qp_ipm_arg *arg);
+//
+void d_ocp_qp_ipm_arg_get(char *field, struct d_ocp_qp_ipm_arg *arg, void *value);
+//
+void d_ocp_qp_ipm_arg_get_lam0_min(struct d_ocp_qp_ipm_arg *arg, double *value);
+//
+void d_ocp_qp_ipm_arg_get_t0_min(struct d_ocp_qp_ipm_arg *arg, double *value);
+//
+void d_ocp_qp_ipm_arg_deepcopy(struct d_ocp_qp_ipm_arg *arg_s, struct d_ocp_qp_ipm_arg *arg_d);
 
 //
 hpipm_size_t d_ocp_qp_ipm_ws_strsize();
@@ -208,6 +243,12 @@ void d_ocp_qp_ipm_get_max_res_eq(struct d_ocp_qp_ipm_ws *ws, double *res_eq);
 void d_ocp_qp_ipm_get_max_res_ineq(struct d_ocp_qp_ipm_ws *ws, double *res_ineq);
 //
 void d_ocp_qp_ipm_get_max_res_comp(struct d_ocp_qp_ipm_ws *ws, double *res_comp);
+//
+void d_ocp_qp_ipm_get_dual_gap(struct d_ocp_qp_ipm_ws *ws, double *dual_gap);
+//
+void d_ocp_qp_ipm_get_obj(struct d_ocp_qp_ipm_ws *ws, double *obj);
+//
+void d_ocp_qp_ipm_get_tau_iter(struct d_ocp_qp_ipm_ws *ws, double *tau_iter);
 //
 void d_ocp_qp_ipm_get_stat(struct d_ocp_qp_ipm_ws *ws, double **stat);
 //
@@ -236,8 +277,10 @@ void d_ocp_qp_ipm_delta_step(int kk, struct d_ocp_qp *qp, struct d_ocp_qp_sol *q
 void d_ocp_qp_ipm_solve(struct d_ocp_qp *qp, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_ipm_arg *arg, struct d_ocp_qp_ipm_ws *ws);
 //
 void d_ocp_qp_ipm_predict(struct d_ocp_qp *qp, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_ipm_arg *arg, struct d_ocp_qp_ipm_ws *ws);
-//
-void d_ocp_qp_ipm_sens(struct d_ocp_qp *qp, struct d_ocp_qp_sol *qp_sol, struct d_ocp_qp_ipm_arg *arg, struct d_ocp_qp_ipm_ws *ws);
+// forward solution sensitivities
+void d_ocp_qp_ipm_sens_frw(struct d_ocp_qp *qp, struct d_ocp_qp_seed *seed, struct d_ocp_qp_sol *sens, struct d_ocp_qp_ipm_arg *arg, struct d_ocp_qp_ipm_ws *ws);
+// adjoint solution sensitivities
+void d_ocp_qp_ipm_sens_adj(struct d_ocp_qp *qp, struct d_ocp_qp_seed *seed, struct d_ocp_qp_sol *sens, struct d_ocp_qp_ipm_arg *arg, struct d_ocp_qp_ipm_ws *ws);
 
 
 

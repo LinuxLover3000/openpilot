@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -51,6 +29,7 @@ typedef struct d_ocp_qp ocp_qp_in;
 typedef struct d_ocp_qp_sol ocp_qp_out;
 typedef struct d_ocp_qp_res ocp_qp_res;
 typedef struct d_ocp_qp_res_ws ocp_qp_res_ws;
+typedef struct d_ocp_qp_seed ocp_qp_seed;
 
 
 
@@ -64,13 +43,17 @@ typedef struct
     void (*opts_initialize_default)(void *config, void *dims, void *opts);
     void (*opts_update)(void *config, void *dims, void *opts);
     void (*opts_set)(void *config_, void *opts_, const char *field, void* value);
+    void (*opts_get)(void *config_, void *opts_, const char *field, void* value);
     acados_size_t (*memory_calculate_size)(void *config, void *dims, void *opts);
     void *(*memory_assign)(void *config, void *dims, void *opts, void *raw_memory);
     void (*memory_get)(void *config_, void *mem_, const char *field, void* value);
     acados_size_t (*workspace_calculate_size)(void *config, void *dims, void *opts);
     int (*evaluate)(void *config, void *qp_in, void *qp_out, void *opts, void *mem, void *work);
+    void (*solver_get)(void *config_, void *qp_in_, void *qp_out_, void *opts_, void *mem_, const char *field, int stage, void* value, int size1, int size2);
     void (*memory_reset)(void *config, void *qp_in, void *qp_out, void *opts, void *mem, void *work);
-    void (*eval_sens)(void *config, void *qp_in, void *qp_out, void *opts, void *mem, void *work);
+    void (*eval_forw_sens)(void *config, void *qp_in, void *seed, void *qp_out, void *opts, void *mem, void *work);
+    void (*eval_adj_sens)(void *config, void *qp_in, void *seed, void *qp_out, void *opts, void *mem, void *work);
+    void (*terminate)(void *config, void *mem, void *work);
 } qp_solver_config;
 #endif
 
@@ -92,9 +75,13 @@ typedef struct
     void *(*memory_assign)(void *dims, void *opts, void *raw_memory);
     void (*memory_get)(void *config, void *mem, const char *field, void* value);
     acados_size_t (*workspace_calculate_size)(void *dims, void *opts);
-    int (*condensing)(void *qp_in, void *qp_out, void *opts, void *mem, void *work);
-    int (*condensing_rhs)(void *qp_in, void *qp_out, void *opts, void *mem, void *work);
+    int (*condensing)(void *qp_in, void *x_cond_qp_in, void *opts, void *mem, void *work);
+    int (*condense_rhs)(void *qp_in, void *x_cond_qp_in, void *opts, void *mem, void *work);
+    int (*condense_rhs_seed)(void *qp_in, void *seed, void *xcond_seed, void *opts, void *mem, void *work);
+    int (*condense_lhs)(void *qp_in, void *x_cond_qp_in, void *opts, void *mem, void *work);
+    int (*condense_qp_out)(void *qp_in, void *x_cond_qp_in, void *qp_out, void *p_cond_qp_out, void *opts, void *mem, void *work);
     int (*expansion)(void *qp_in, void *qp_out, void *opts, void *mem, void *work);
+    int (*expand_sol_seed)(void *qp_in, void *qp_out, void *opts, void *mem, void *work);
 } ocp_qp_xcond_config;
 
 
@@ -142,6 +129,10 @@ void ocp_qp_dims_get(void *config_, void *dims, int stage, const char *field, in
 acados_size_t ocp_qp_in_calculate_size(ocp_qp_dims *dims);
 //
 ocp_qp_in *ocp_qp_in_assign(ocp_qp_dims *dims, void *raw_memory);
+//
+void ocp_qp_in_get(ocp_qp_in *qp_in, int stage, const char *field, void *value);
+//
+void ocp_qp_in_dump_to_json(ocp_qp_in *qp_in, const char *filename);
 
 
 /* out */
@@ -149,6 +140,20 @@ ocp_qp_in *ocp_qp_in_assign(ocp_qp_dims *dims, void *raw_memory);
 acados_size_t ocp_qp_out_calculate_size(ocp_qp_dims *dims);
 //
 ocp_qp_out *ocp_qp_out_assign(ocp_qp_dims *dims, void *raw_memory);
+//
+double ocp_qp_out_compute_primal_nrm_inf(ocp_qp_out* qp_out);
+//
+double ocp_qp_out_compute_dual_nrm_inf(ocp_qp_out* qp_out);
+//
+void ocp_qp_out_copy(ocp_qp_out* from, ocp_qp_out* to);
+//
+void ocp_qp_out_axpy(double alpha, ocp_qp_out* x, ocp_qp_out* y, ocp_qp_out* z);
+//
+void ocp_qp_out_set_to_zero(ocp_qp_out* qp_out);
+void ocp_qp_out_add(double alpha, ocp_qp_out* x, ocp_qp_out* y);
+void ocp_qp_out_sc(double alpha, ocp_qp_out* x);
+double ocp_qp_out_ddot(ocp_qp_out *x, ocp_qp_out *y, struct blasfeo_dvec *work_tmp_2ni);
+
 
 /* res */
 //
@@ -164,14 +169,20 @@ void ocp_qp_res_compute(ocp_qp_in *qp_in, ocp_qp_out *qp_out, ocp_qp_res *qp_res
 //
 void ocp_qp_res_compute_nrm_inf(ocp_qp_res *qp_res, double res[4]);
 
+/* seed */
+//
+acados_size_t ocp_qp_seed_calculate_size(ocp_qp_dims *dims);
+//
+ocp_qp_seed *ocp_qp_seed_assign(ocp_qp_dims *dims, void *raw_memory);
 
 /* misc */
 //
-void ocp_qp_stack_slacks_dims(ocp_qp_dims *in, ocp_qp_dims *out);
-//
-void ocp_qp_stack_slacks(ocp_qp_in *in, ocp_qp_in *out);
-//
 void ocp_qp_compute_t(ocp_qp_in *qp_in, ocp_qp_out *qp_out);
+//
+// ocp_qp_stack_slacks -> not used anymore, broken when migrating to idxs_rev
+// void ocp_qp_stack_slacks_dims(ocp_qp_dims *in, ocp_qp_dims *out);
+// //
+// void ocp_qp_stack_slacks(ocp_qp_in *in, ocp_qp_in *out);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -58,15 +36,13 @@ void read_matrix(const char *file_name, real_t *array, const int_t nrows, const 
 void write_double_vector_to_txt(real_t *vec, int_t n, const char *fname);
 
 // ocp nlp
-// TODO(andrea): inconsistent naming
-void ocp_nlp_dims_print(ocp_nlp_dims *dims);
-// TODO(andrea): inconsistent naming
-void ocp_nlp_out_print(ocp_nlp_dims *dims, ocp_nlp_out *nlp_out);
-// TODO(andrea): inconsistent naming
-void ocp_nlp_res_print(ocp_nlp_dims *dims, ocp_nlp_res *nlp_res);
+void print_ocp_nlp_dims(ocp_nlp_dims *dims);
+
+void print_ocp_nlp_out(ocp_nlp_dims *dims, ocp_nlp_out *nlp_out);
+
+void print_ocp_nlp_res(ocp_nlp_dims *dims, ocp_nlp_res *nlp_res);
 
 // ocp qp
-// TODO: move printing routines below that print qp structures to HPIPM!
 void print_ocp_qp_dims(ocp_qp_dims *dims);
 
 // void print_dense_qp_dims(dense_qp_dims *dims);
@@ -102,6 +78,12 @@ void print_qp_info(qp_info *info);
 
 // blasfeo
 // void print_blasfeo_target();
+
+void print_debug_output(char* message, int print_level, int required_print_level);
+//
+void print_debug_output_double(char* message, double value, int print_level, int required_print_level);
+
+const char* status_to_string(return_values_t status);
 
 #ifdef __cplusplus
 } /* extern "C" */

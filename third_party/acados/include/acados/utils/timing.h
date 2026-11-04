@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -38,8 +16,7 @@
 extern "C" {
 #endif
 
-#ifdef MEASURE_TIMINGS
-#if (defined _WIN32 || defined _WIN64) && !(defined __MINGW32__ || defined __MINGW64__)
+#if (defined _WIN32 || defined _WIN64)
 
 /* Use Windows QueryPerformanceCounter for timing. */
 #include <Windows.h>
@@ -65,6 +42,15 @@ typedef struct acados_timer_
 } acados_timer;
 
 #elif defined(__MABX2__)
+
+#include <brtenv.h>
+
+typedef struct acados_timer_
+{
+    double time;
+} acados_timer;
+
+#elif defined(_DS1104)
 
 #include <brtenv.h>
 
@@ -101,13 +87,6 @@ typedef struct acados_timer_
 #endif  // __STDC_VERSION__ >= 199901L
 
 #endif  // (defined _WIN32 || defined _WIN64)
-
-#else
-
-// Dummy type when timings are off
-typedef real_t acados_timer;
-
-#endif  // MEASURE_TIMINGS
 
 /** A function for measurement of the current time. */
 void acados_tic(acados_timer* t);

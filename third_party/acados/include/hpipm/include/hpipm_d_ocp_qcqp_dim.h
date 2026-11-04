@@ -49,16 +49,16 @@ struct d_ocp_qcqp_dim
 	struct d_ocp_qp_dim *qp_dim; // dim of qp approximation
 	int *nx; // number of states
 	int *nu; // number of inputs
-	int *nb; // number of box constraints
+	int *nb; // number of (two-sided) box constraints
 	int *nbx; // number of (two-sided) state box constraints
 	int *nbu; // number of (two-sided) input box constraints
 	int *ng; // number of (two-sided) general constraints
 	int *nq; // number of (upper) quadratic constraints
-	int *ns; // number of soft constraints
-	int *nsbx; // number of (two-sided) soft state box constraints
-	int *nsbu; // number of (two-sided) soft input box constraints
-	int *nsg; // number of (two-sided) soft general constraints
-	int *nsq; // number of (upper) soft quadratic constraints
+	int *ns; // number of slacks of soft constraints
+	int *nbxe; // number of state box constraints which are equality
+	int *nbue; // number of input box constraints which are equality
+	int *nge; // number of general constraints which are equality
+	int *nqe; // number of quadratic constraints which are equality
 	int N; // horizon length
 	hpipm_size_t memsize;
 	};
@@ -90,13 +90,13 @@ void d_ocp_qcqp_dim_set_nq(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
 void d_ocp_qcqp_dim_set_ns(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
-void d_ocp_qcqp_dim_set_nsbx(int stage, int value, struct d_ocp_qcqp_dim *dim);
+void d_ocp_qcqp_dim_set_nbxe(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
-void d_ocp_qcqp_dim_set_nsbu(int stage, int value, struct d_ocp_qcqp_dim *dim);
+void d_ocp_qcqp_dim_set_nbue(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
-void d_ocp_qcqp_dim_set_nsg(int stage, int value, struct d_ocp_qcqp_dim *dim);
+void d_ocp_qcqp_dim_set_nge(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
-void d_ocp_qcqp_dim_set_nsq(int stage, int value, struct d_ocp_qcqp_dim *dim);
+void d_ocp_qcqp_dim_set_nqe(int stage, int value, struct d_ocp_qcqp_dim *dim);
 //
 void d_ocp_qcqp_dim_get(struct d_ocp_qcqp_dim *dim, char *field, int stage, int *value);
 //

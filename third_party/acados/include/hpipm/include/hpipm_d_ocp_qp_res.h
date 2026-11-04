@@ -62,7 +62,10 @@ struct d_ocp_qp_res
 	struct blasfeo_dvec *res_d; // d-residuals
 	struct blasfeo_dvec *res_m; // m-residuals
 	double res_max[4]; // max of residuals
-	double res_mu; // mu-residual
+	double res_mu_sum; // sum of res_m
+	double res_mu; // mu-residual = res_mu_sum / #constr
+	double obj; // (primal) objective
+	double dual_gap; // duality gap
 	hpipm_size_t memsize;
 	};
 
@@ -72,6 +75,10 @@ struct d_ocp_qp_res_ws
 	{
 	struct blasfeo_dvec *tmp_nbgM; // work space of size nbM+ngM
 	struct blasfeo_dvec *tmp_nsM; // work space of size nsM
+	struct blasfeo_dvec *tmp_lam_mask; // workspace of size 2*nbM+2*ngM+2*nsM
+	double nc_mask_inv; // reciprocal of number of non-masked constraints
+	int valid_nc_mask; // signal that there mask_constr and nc_mask_inv are valid
+	int mask_constr; // signal that there are some masked constraints
 	hpipm_size_t memsize;
 	};
 
@@ -101,6 +108,41 @@ void d_ocp_qp_res_get_max_res_eq(struct d_ocp_qp_res *res, double *value);
 void d_ocp_qp_res_get_max_res_ineq(struct d_ocp_qp_res *res, double *value);
 //
 void d_ocp_qp_res_get_max_res_comp(struct d_ocp_qp_res *res, double *value);
+//
+void d_ocp_qp_res_set_zero(struct d_ocp_qp_res *res);
+//
+void d_ocp_qp_res_set(char *field, int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_r(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_q(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_zl(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_zu(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_b(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_lb(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_lbu(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_lbx(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_ub(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_ubu(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_ubx(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_lg(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_ug(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_ls(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+//
+void d_ocp_qp_res_set_res_us(int stage, double *vec, struct d_ocp_qp_res *qp_res);
+
 
 
 

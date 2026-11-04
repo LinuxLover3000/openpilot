@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -45,7 +23,7 @@ extern "C" {
  ************************************************/
 
 //
-void external_function_param_generic_create(external_function_param_generic *fun, int np);
+void external_function_param_generic_create(external_function_param_generic *fun, int np, external_function_opts *opts_);
 //
 void external_function_param_generic_free(external_function_param_generic *fun);
 
@@ -56,11 +34,11 @@ void external_function_param_generic_free(external_function_param_generic *fun);
  ************************************************/
 
 //
-void external_function_casadi_create(external_function_casadi *fun);
+void external_function_casadi_create(external_function_casadi *fun, external_function_opts *opts_);
 //
 void external_function_casadi_free(external_function_casadi *fun);
 //
-void external_function_casadi_create_array(int size, external_function_casadi *funs);
+void external_function_casadi_create_array(int size, external_function_casadi *funs, external_function_opts *opts_);
 //
 void external_function_casadi_free_array(int size, external_function_casadi *funs);
 
@@ -71,14 +49,36 @@ void external_function_casadi_free_array(int size, external_function_casadi *fun
  ************************************************/
 
 //
-void external_function_param_casadi_create(external_function_param_casadi *fun, int np);
+void external_function_param_casadi_create(external_function_param_casadi *fun, int np, external_function_opts *opts_);
 //
 void external_function_param_casadi_free(external_function_param_casadi *fun);
 //
 void external_function_param_casadi_create_array(int size, external_function_param_casadi *funs,
-                                                 int np);
+                                                 int np, external_function_opts *opts_);
 //
 void external_function_param_casadi_free_array(int size, external_function_param_casadi *funs);
+
+
+
+/************************************************
+ * external_function_external_param_casadi
+ ************************************************/
+
+//
+void external_function_external_param_casadi_create(external_function_external_param_casadi *fun, external_function_opts *opts_);
+//
+void external_function_external_param_casadi_free(external_function_external_param_casadi *fun);
+
+/************************************************
+ * external_function_external_param_generic
+ ************************************************/
+
+//
+void external_function_external_param_generic_create(external_function_external_param_generic *fun, external_function_opts *opts_);
+//
+void external_function_external_param_generic_free(external_function_external_param_generic *fun);
+
+
 
 
 

@@ -65,23 +65,28 @@ struct d_tree_ocp_qp_ipm_arg
 	double res_b_max; // exit cond on inf norm of residuals
 	double res_d_max; // exit cond on inf norm of residuals
 	double res_m_max; // exit cond on inf norm of residuals
+	double dual_gap_max; // exit cond on duality gap
 	double reg_prim; // reg of primal hessian
 	double lam_min; // min value in lam vector
 	double t_min; // min value in t vector
 	double tau_min; // min value of barrier parameter
+	double lam0_min; // min value in lam vector at hot start initialization
+	double t0_min; // min value in t vector at hot start initialization
+	double m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int iter_max; // exit cond in iter number
 	int stat_max; // iterations saved in stat
 	int pred_corr; // use Mehrotra's predictor-corrector IPM algirthm
 	int cond_pred_corr; // conditional Mehrotra's predictor-corrector
 	int itref_pred_max; // max number of iterative refinement steps for predictor step
 	int itref_corr_max; // max number of iterative refinement steps for corrector step
-	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol
+	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol, 3 hot start
 	int lq_fact; // 0 syrk+potrf, 1 mix, 2 lq
 	int abs_form; // absolute IPM formulation
 	int comp_dual_sol_eq; // dual solution (only for abs_form==1)
 	int comp_res_exit; // compute residuals on exit (only for abs_form==1 and comp_dual_sol==1)
 	int split_step; // use different steps for primal and dual variables
 	int t_lam_min; // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
+	int t0_init; // initialization scheme of slacks t (with corresponding multiplier lam=mu0/t): 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
 	int mode;
 	hpipm_size_t memsize;
 	};
@@ -133,6 +138,8 @@ void d_tree_ocp_qp_ipm_arg_create(struct d_tree_ocp_qp_dim *dim, struct d_tree_o
 //
 void d_tree_ocp_qp_ipm_arg_set_default(enum hpipm_mode mode, struct d_tree_ocp_qp_ipm_arg *arg);
 //
+void d_tree_ocp_qp_ipm_arg_set(char *field, void *value, struct d_tree_ocp_qp_ipm_arg *arg);
+//
 void d_tree_ocp_qp_ipm_arg_set_iter_max(int *iter_max, struct d_tree_ocp_qp_ipm_arg *arg);
 //
 void d_tree_ocp_qp_ipm_arg_set_alpha_min(double *alpha_min, struct d_tree_ocp_qp_ipm_arg *arg);
@@ -146,6 +153,8 @@ void d_tree_ocp_qp_ipm_arg_set_tol_eq(double *tol_eq, struct d_tree_ocp_qp_ipm_a
 void d_tree_ocp_qp_ipm_arg_set_tol_ineq(double *tol_ineq, struct d_tree_ocp_qp_ipm_arg *arg);
 //
 void d_tree_ocp_qp_ipm_arg_set_tol_comp(double *tol_comp, struct d_tree_ocp_qp_ipm_arg *arg);
+//
+void d_tree_ocp_qp_ipm_arg_set_tol_dual_gap(double *tol_dual_gap, struct d_tree_ocp_qp_ipm_arg *arg);
 //
 void d_tree_ocp_qp_ipm_arg_set_reg_prim(double *reg, struct d_tree_ocp_qp_ipm_arg *arg);
 //
@@ -164,10 +173,22 @@ void d_tree_ocp_qp_ipm_arg_set_lam_min(double *value, struct d_tree_ocp_qp_ipm_a
 void d_tree_ocp_qp_ipm_arg_set_t_min(double *value, struct d_tree_ocp_qp_ipm_arg *arg);
 //
 void d_tree_ocp_qp_ipm_arg_set_tau_min(double *value, struct d_tree_ocp_qp_ipm_arg *arg);
+// min value of lam in the hot start initialization
+void d_tree_ocp_qp_ipm_arg_set_lam0_min(double *value, struct d_tree_ocp_qp_ipm_arg *arg);
+// min value of t in the hot start initialization
+void d_tree_ocp_qp_ipm_arg_set_t0_min(double *value, struct d_tree_ocp_qp_ipm_arg *arg);
 //
 void d_tree_ocp_qp_ipm_arg_set_split_step(int *value, struct d_tree_ocp_qp_ipm_arg *arg);
 //
+void d_tree_ocp_qp_ipm_arg_set_m_safe(double *value, struct d_tree_ocp_qp_ipm_arg *arg);
+//
 void d_tree_ocp_qp_ipm_arg_set_t_lam_min(int *value, struct d_tree_ocp_qp_ipm_arg *arg);
+//
+void d_tree_ocp_qp_ipm_arg_get(char *field, struct d_tree_ocp_qp_ipm_arg *arg, void *value);
+//
+void d_tree_ocp_qp_ipm_arg_get_lam0_min(struct d_tree_ocp_qp_ipm_arg *arg, double *value);
+//
+void d_tree_ocp_qp_ipm_arg_get_t0_min(struct d_tree_ocp_qp_ipm_arg *arg, double *value);
 
 //
 hpipm_size_t d_tree_ocp_qp_ipm_ws_memsize(struct d_tree_ocp_qp_dim *dim, struct d_tree_ocp_qp_ipm_arg *arg);
@@ -185,6 +206,10 @@ void d_tree_ocp_qp_ipm_get_max_res_eq(struct d_tree_ocp_qp_ipm_ws *ws, double *r
 void d_tree_ocp_qp_ipm_get_max_res_ineq(struct d_tree_ocp_qp_ipm_ws *ws, double *res_ineq);
 //
 void d_tree_ocp_qp_ipm_get_max_res_comp(struct d_tree_ocp_qp_ipm_ws *ws, double *res_comp);
+//
+void d_tree_ocp_qp_ipm_get_dual_gap(struct d_tree_ocp_qp_ipm_ws *ws, double *dual_gap);
+//
+void d_tree_ocp_qp_ipm_get_obj(struct d_tree_ocp_qp_ipm_ws *ws, double *obj);
 //
 void d_tree_ocp_qp_ipm_get_stat(struct d_tree_ocp_qp_ipm_ws *ws, double **stat);
 //

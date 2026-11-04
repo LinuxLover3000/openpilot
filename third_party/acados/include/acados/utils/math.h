@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 #ifndef ACADOS_UTILS_MATH_H_
@@ -36,8 +14,13 @@ extern "C" {
 #endif
 
 #include "acados/utils/types.h"
+#include "blasfeo_common.h"
 
 #if defined(__MABX2__)
+double fmax(double a, double b);
+int isnan(double x);
+#endif
+#if defined(_DS1104)
 double fmax(double a, double b);
 int isnan(double x);
 #endif
@@ -90,11 +73,19 @@ void expm(int row, double *A);
 // void d_compute_qp_size_ocp2dense_rev(int N, int *nx, int *nu, int *nb, int **hidxb, int *ng,
 //                                      int *nvd, int *ned, int *nbd, int *ngd);
 
+// Eigendecomposition of matrix A: reads only the lower triangular of A
 void acados_eigen_decomposition(int dim, double *A, double *V, double *d, double *e);
 
 double minimum_of_doubles(double *x, int n);
 
 void neville_algorithm(double xx, int n, double *x, double *Q, double *out);
+
+// assumes A symmetric, stored as lower triangular
+void compute_gershgorin_max_abs_eig_estimate(int n, struct blasfeo_dmat *A, double *out);
+
+// assumes A symmetric, stored as lower triangular
+void compute_gershgorin_min_eig_estimate(int n, struct blasfeo_dmat *A, double *out);
+
 
 #ifdef __cplusplus
 } /* extern "C" */

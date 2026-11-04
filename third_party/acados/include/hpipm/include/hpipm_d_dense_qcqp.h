@@ -67,13 +67,14 @@ struct d_dense_qcqp
 	struct blasfeo_dvec *m; // rhs of complementarity condition
 	struct blasfeo_dvec *Z; // (diagonal) hessian of slacks
 	int *idxb; // indices of box constrained variables within [u; x]
-	int *idxs_rev; // index of soft constraints (reverse storage)
+	int *idxs_rev; // index of slack softening each constraint
 	int *Hq_nzero; // for each int, the last 3 bits ...abc, {a,b,c}=0 => {R,S,Q}=0
 	hpipm_size_t memsize; // memory size in bytes
 	};
 
 
-
+//
+hpipm_size_t d_dense_qcqp_strsize();
 //
 hpipm_size_t d_dense_qcqp_memsize(struct d_dense_qcqp_dim *dim);
 //
@@ -91,6 +92,8 @@ void d_dense_qcqp_set_A(double *A, struct d_dense_qcqp *qp);
 void d_dense_qcqp_set_b(double *b, struct d_dense_qcqp *qp);
 //
 void d_dense_qcqp_set_idxb(int *idxb, struct d_dense_qcqp *qp);
+//
+void d_dense_qcqp_set_Jb(double *Jb, struct d_dense_qcqp *qp);
 //
 void d_dense_qcqp_set_lb(double *lb, struct d_dense_qcqp *qp);
 //
@@ -121,6 +124,12 @@ void d_dense_qcqp_set_uq_mask(double *uq, struct d_dense_qcqp *qp);
 void d_dense_qcqp_set_idxs(int *idxs, struct d_dense_qcqp *qp);
 //
 void d_dense_qcqp_set_idxs_rev(int *idxs_rev, struct d_dense_qcqp *qp);
+//
+void d_dense_qcqp_set_Jsb(double *Jsb, struct d_dense_qcqp *qp);
+//
+void d_dense_qcqp_set_Jsg(double *Jsg, struct d_dense_qcqp *qp);
+//
+void d_dense_qcqp_set_Jsq(double *Jsq, struct d_dense_qcqp *qp);
 //
 void d_dense_qcqp_set_Zl(double *Zl, struct d_dense_qcqp *qp);
 //

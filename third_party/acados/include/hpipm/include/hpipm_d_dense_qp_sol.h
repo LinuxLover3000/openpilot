@@ -69,6 +69,8 @@ struct d_dense_qp_sol
 
 
 //
+hpipm_size_t d_dense_qp_sol_strsize();
+//
 hpipm_size_t d_dense_qp_sol_memsize(struct d_dense_qp_dim *dim);
 //
 void d_dense_qp_sol_create(struct d_dense_qp_dim *dim, struct d_dense_qp_sol *qp_sol, void *memory);
@@ -79,10 +81,49 @@ void d_dense_qp_sol_get(char *field, struct d_dense_qp_sol *sol, void *value);
 //
 void d_dense_qp_sol_get_v(struct d_dense_qp_sol *sol, double *v);
 //
+void d_dense_qp_sol_get_sl(struct d_dense_qp_sol *sol, double *sl);
+//
+void d_dense_qp_sol_get_su(struct d_dense_qp_sol *sol, double *su);
+//
+void d_dense_qp_sol_get_pi(struct d_dense_qp_sol *sol, double *pi);
+//
+void d_dense_qp_sol_get_lam_lb(struct d_dense_qp_sol *sol, double *lam_lb);
+//
+void d_dense_qp_sol_get_lam_ub(struct d_dense_qp_sol *sol, double *lam_ub);
+//
+void d_dense_qp_sol_get_lam_lg(struct d_dense_qp_sol *sol, double *lam_lg);
+//
+void d_dense_qp_sol_get_lam_ug(struct d_dense_qp_sol *sol, double *lam_ug);
+//
+void d_dense_qp_sol_get_lam_ls(struct d_dense_qp_sol *sol, double *lam_ls);
+//
+void d_dense_qp_sol_get_lam_us(struct d_dense_qp_sol *sol, double *lam_us);
+//
 void d_dense_qp_sol_get_valid_obj(struct d_dense_qp_sol *sol, int *valid_obj);
 //
 void d_dense_qp_sol_get_obj(struct d_dense_qp_sol *sol, double *obj);
-
+//
+void d_dense_qp_sol_set(char *field, void *value, struct d_dense_qp_sol *qp_sol);
+//
+void d_dense_qp_sol_set_v(double *v, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_sl(double *sl, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_su(double *su, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_pi(double *pi, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_lb(double *lam_lb, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_ub(double *lam_ub, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_lg(double *lam_lg, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_ug(double *lam_ug, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_ls(double *lam_ls, struct d_dense_qp_sol *sol);
+//
+void d_dense_qp_sol_set_lam_us(double *lam_us, struct d_dense_qp_sol *sol);
 
 
 #ifdef __cplusplus

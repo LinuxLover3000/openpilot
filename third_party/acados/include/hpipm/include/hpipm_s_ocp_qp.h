@@ -64,7 +64,7 @@ struct s_ocp_qp
 	struct blasfeo_svec *m; // rhs of complementarity condition
 	struct blasfeo_svec *Z; // (diagonal) hessian of slacks
 	int **idxb; // indices of box constrained variables within [u; x]
-	int **idxs_rev; // index of soft constraints (reverse storage)
+	int **idxs_rev; // index of slack softening each constraint
 	int **idxe; // indices of constraints within [bu, bx, g] that are equalities, subset of [0, ..., nbu+nbx+ng-1]
 	int *diag_H_flag; // flag the fact that Hessian is diagonal
 	hpipm_size_t memsize; // memory size in bytes
@@ -86,10 +86,10 @@ void s_ocp_qp_copy_all(struct s_ocp_qp *qp_orig, struct s_ocp_qp *qp_dest);
 void s_ocp_qp_set_all_zero(struct s_ocp_qp *qp);
 //
 void s_ocp_qp_set_rhs_zero(struct s_ocp_qp *qp);
-//
-void s_ocp_qp_set_all(float **A, float **B, float **b, float **Q, float **S, float **R, float **q, float **r, int **idxbx, float **lbx, float **ubx, int **idxbu, float **lbu, float **ubu, float **C, float **D, float **lg, float **ug, float **Zl, float **Zu, float **zl, float **zu, int **idxs, float **ls, float **us, struct s_ocp_qp *qp);
-//
-void s_ocp_qp_set_all_rowmaj(float **A, float **B, float **b, float **Q, float **S, float **R, float **q, float **r, int **idxbx, float **lbx, float **ubx, int **idxbu, float **lbu, float **ubu, float **C, float **D, float **lg, float **ug, float **Zl, float **Zu, float **zl, float **zu, int **idxs, float **ls, float **us, struct s_ocp_qp *qp);
+// sets the most common fields of a QP; matrices are in the default column-major format
+void s_ocp_qp_set_all(float **A, float **B, float **b, float **Q, float **S, float **R, float **q, float **r, int **idxbx, float **lbx, float **ubx, int **idxbu, float **lbu, float **ubu, float **C, float **D, float **lg, float **ug, float **Zl, float **Zu, float **zl, float **zu, int **idxs, int **idxs_rev, float **ls, float **us, struct s_ocp_qp *qp);
+// sets the most common fields of a QP; matrices are in row-major format
+void s_ocp_qp_set_all_rowmaj(float **A, float **B, float **b, float **Q, float **S, float **R, float **q, float **r, int **idxbx, float **lbx, float **ubx, int **idxbu, float **lbu, float **ubu, float **C, float **D, float **lg, float **ug, float **Zl, float **Zu, float **zl, float **zu, int **idxs, int **idxs_rev, float **ls, float **us, struct s_ocp_qp *qp);
 //
 void s_ocp_qp_set(char *fiels_name, int stage, void *value, struct s_ocp_qp *qp);
 //
@@ -202,6 +202,28 @@ void s_ocp_qp_set_Jbue(int stage, float *vec, struct s_ocp_qp *qp);
 void s_ocp_qp_set_Jge(int stage, float *vec, struct s_ocp_qp *qp);
 //
 void s_ocp_qp_set_diag_H_flag(int stage, int *value, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_all(float *m, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lb(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_ub(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lbx(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_ubx(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lbu(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_ubu(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lg(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_ug(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lls(int stage, float *vec, struct s_ocp_qp *qp);
+//
+void s_ocp_qp_set_m_lus(int stage, float *vec, struct s_ocp_qp *qp);
 
 // getters
 //
@@ -294,6 +316,8 @@ void s_ocp_qp_get_idxs_rev(int stage, struct s_ocp_qp *qp, int *vec);
 //void s_ocp_qp_get_Jsbx(int stage, struct s_ocp_qp *qp, float *vec);
 //
 //void s_ocp_qp_get_Jsg(int stage, struct s_ocp_qp *qp, float *vec);
+//
+void s_ocp_qp_get_idxe(int stage, struct s_ocp_qp *qp, int *vec);
 
 
 

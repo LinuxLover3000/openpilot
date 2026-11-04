@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -39,13 +17,14 @@ extern "C" {
 #include "acados/sim/sim_common.h"
 #include "acados/utils/types.h"
 
-#include "blasfeo/include/blasfeo_common.h"
+#include "blasfeo_common.h"
 
 typedef struct
 {
     int nx;
     int nu;
     int nz;
+    int np;
 
 } sim_irk_dims;
 
@@ -63,13 +42,16 @@ typedef struct
     external_function_generic *impl_ode_jac_x_xdot_u_z;
     // hessian of implicit ode:
     external_function_generic *impl_ode_hess;
+    // Jacobian of implicit ode w.r.t. p
+    external_function_generic *impl_dae_jac_p;
+
 } irk_model;
 
 
 
 typedef struct
 {
-    struct blasfeo_dvec *rG;        // residuals of G (nx*ns)
+    struct blasfeo_dvec *rG;        // residuals of G ((nx+nz)*ns)
     struct blasfeo_dvec *K;         // internal K variables ((nx+nz)*ns)
     struct blasfeo_dvec *xt;        // temporary x
     struct blasfeo_dvec *xn;        // x at each integration step
@@ -112,6 +94,9 @@ typedef struct
     //         if ( opts->sens_hess) - array of blasfeo_dmat to store intermediate results
     struct blasfeo_dmat *dG_dK;   // jacobian of G over K ((nx+nz)*ns, (nx+nz)*ns)
 
+    struct blasfeo_dmat *dK_dp;  // sensitivity of K w.r.t p ((nx+nz)*ns, np)
+    struct blasfeo_dmat *df_dp;  // Jacobian of f w.r.t p (nx+nz, np)
+
     // ipiv: index of pivot vector
     //         if (!opts->sens_hess) - array (ns * (nx + nz)) that is reused
     //         if ( opts->sens_hess) - array (ns * (nx + nz)) * num_steps, to store all
@@ -130,6 +115,51 @@ typedef struct
     struct blasfeo_dmat dxkzu_dw0;  // size (2*nx + nu + nz) x (nx + nu)
     struct blasfeo_dmat tmp_dxkzu_dw0;  // size (2*nx + nu + nz) x (nx + nu)
 
+    /* the following variables are only available if (opts->cost_propagation) */
+    struct blasfeo_dmat *S_forw_stage;
+
+    /* function argument vectors*/
+    ext_fun_arg_t impl_ode_type_in[5];
+    void *impl_ode_in[5];
+
+    ext_fun_arg_t impl_ode_fun_type_out[1];
+    void *impl_ode_fun_out[1];
+
+    ext_fun_arg_t impl_ode_fun_jac_x_xdot_z_type_out[4];
+    void *impl_ode_fun_jac_x_xdot_z_out[4];
+
+    ext_fun_arg_t impl_ode_jac_x_xdot_u_z_type_out[4];
+    void *impl_ode_jac_x_xdot_u_z_out[4];
+
+    ext_fun_arg_t impl_dae_jac_p_type_out[1];
+    void *impl_dae_jac_p_out[1];
+
+    ext_fun_arg_t impl_ode_hess_type_in[6];
+    void *impl_ode_hess_in[6];
+
+    ext_fun_arg_t impl_ode_hess_type_out[1];
+    void *impl_ode_hess_out[1];
+
+    struct blasfeo_dvec_args impl_ode_xdot_in;
+    struct blasfeo_dvec_args impl_ode_z_in;
+    struct blasfeo_dvec_args impl_ode_res_out;
+    struct blasfeo_dvec_args impl_ode_hess_lambda_in;
+
+    double t_current;
+
+    // Step pointers, populated during helper calls
+    struct blasfeo_dmat *dG_dK_ss;
+    struct blasfeo_dmat *dG_dxu_ss;
+    struct blasfeo_dmat *dK_dxu_ss;
+    struct blasfeo_dmat *S_forw_ss;
+    int *ipiv_ss;
+
+    /* timers */
+    acados_timer timer_ad;
+    acados_timer timer_la;
+
+    double timing_ad;
+    double timing_la;
 } sim_irk_workspace;
 
 
@@ -138,9 +168,15 @@ typedef struct
     double *xdot;  // xdot[NX] - initialization for state derivatives k within the integrator
     double *z;     // z[NZ] - initialization for algebraic variables z
 
-	double time_sim;
-	double time_ad;
-	double time_la;
+    double time_sim;
+    double time_ad;
+    double time_la;
+
+    void *cost_capsule;  // pointer to ocp_nlp_cost_capsule of the cost module
+    struct blasfeo_dmat *cost_hess;
+
+    struct blasfeo_dmat *S_p;
+
 } sim_irk_memory;
 
 
@@ -171,6 +207,10 @@ int sim_irk_memory_set(void *config_, void *dims_, void *mem_, const char *field
 
 // workspace
 acados_size_t sim_irk_workspace_calculate_size(void *config, void *dims, void *opts_);
+
+size_t sim_irk_get_external_fun_workspace_requirement(void *config_, void *dims_, void *opts_, void *model_);
+void sim_irk_set_external_fun_workspaces(void *config_, void *dims_, void *opts_, void *model_, void *workspace_);
+
 void sim_irk_config_initialize_default(void *config);
 
 // main

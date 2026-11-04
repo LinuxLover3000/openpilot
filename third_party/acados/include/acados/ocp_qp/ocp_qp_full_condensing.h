@@ -3,29 +3,7 @@
  *
  * This file is part of acados.
  *
- * The 2-Clause BSD License
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation
- * and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.;
+ * Licensed under the 2-Clause BSD License.
  */
 
 
@@ -74,10 +52,13 @@ typedef struct ocp_qp_full_condensing_memory_
     // in memory
     dense_qp_in *fcond_qp_in;
     dense_qp_out *fcond_qp_out;
+    dense_qp_seed *fcond_qp_seed;
     ocp_qp_in *red_qp; // reduced qp
     ocp_qp_out *red_sol; // reduced qp sol
+    ocp_qp_seed *red_seed;
     // only pointer
     ocp_qp_in *ptr_qp_in;
+    ocp_qp_seed *ptr_qp_seed;
     qp_info *qp_out_info; // info in fcond_qp_in
     double time_qp_xcond;
 } ocp_qp_full_condensing_memory;
@@ -102,6 +83,10 @@ void *ocp_qp_full_condensing_memory_assign(void *dims, void *opts_, void *raw_me
 acados_size_t ocp_qp_full_condensing_workspace_calculate_size(void *dims, void *opts_);
 //
 int ocp_qp_full_condensing(void *in, void *out, void *opts, void *mem, void *work);
+//
+int ocp_qp_full_condensing_condense_rhs(void *in, void *out, void *opts, void *mem, void *work);
+//
+int ocp_qp_full_condensing_condense_lhs(void *in, void *out, void *opts, void *mem, void *work);
 //
 int ocp_qp_full_expansion(void *in, void *out, void *opts, void *mem, void *work);
 //

@@ -46,6 +46,7 @@
 #include <hpipm_s_ocp_qp.h>
 #include <hpipm_s_ocp_qp_res.h>
 #include <hpipm_s_ocp_qp_sol.h>
+#include <hpipm_s_ocp_qp_seed.h>
 
 
 
@@ -57,23 +58,28 @@ extern "C" {
 
 struct s_ocp_qp_ipm_arg
 	{
+	struct s_ocp_qp_dim *dim;
 	float mu0; // initial value for complementarity slackness
 	float alpha_min; // exit cond on step length
 	float res_g_max; // exit cond on inf norm of residuals
 	float res_b_max; // exit cond on inf norm of residuals
 	float res_d_max; // exit cond on inf norm of residuals
 	float res_m_max; // exit cond on inf norm of residuals
+	float dual_gap_max; // exit cond on duality gap
 	float reg_prim; // reg of primal hessian
 	float lam_min; // min value in lam vector
 	float t_min; // min value in t vector
 	float tau_min; // min value of barrier parameter
+	float lam0_min; // min value in lam vector at hot start initialization
+	float t0_min; // min value in t vector at hot start initialization
+	float m_safe; // in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
 	int iter_max; // exit cond in iter number
 	int stat_max; // iterations saved in stat
 	int pred_corr; // use Mehrotra's predictor-corrector IPM algirthm
 	int cond_pred_corr; // conditional Mehrotra's predictor-corrector
 	int itref_pred_max; // max number of iterative refinement steps for predictor step
 	int itref_corr_max; // max number of iterative refinement steps for corrector step
-	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol
+	int warm_start; // 0 no warm start, 1 warm start primal sol, 2 warm start primal and dual sol, 3 hot start
 	int square_root_alg; // 0 classical Riccati, 1 square-root Riccati
 	int lq_fact; // 0 syrk+potrf, 1 mix, 2 lq (for square_root_alg==1)
 	int abs_form; // absolute IPM formulation
@@ -83,6 +89,8 @@ struct s_ocp_qp_ipm_arg
 	int split_step; // use different steps for primal and dual variables
 	int var_init_scheme; // variables initialization scheme
 	int t_lam_min; // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
+	int t0_init; // initialization scheme of slacks t (with corresponding multiplier lam=mu0/t): 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
+	int update_fact_exit; // provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
 	int mode;
 	hpipm_size_t memsize;
 	};
@@ -104,7 +112,6 @@ struct s_ocp_qp_ipm_ws
 	struct blasfeo_svec *gamma; // hessian update
 	struct blasfeo_svec *tmp_nuxM; // work space of size nxM
 	struct blasfeo_svec *tmp_nbgM; // work space of size nbM+ngM
-	struct blasfeo_svec *tmp_nsM; // work space of size nsM
 	struct blasfeo_svec *Pb; // Pb
 	struct blasfeo_svec *Zs_inv;
 	struct blasfeo_svec *tmp_m;
@@ -115,21 +122,29 @@ struct s_ocp_qp_ipm_ws
 	struct blasfeo_smat *Lh;
 	struct blasfeo_smat *AL;
 	struct blasfeo_smat *lq0;
-	struct blasfeo_smat *tmp_nxM_nxM;
+	struct blasfeo_smat *tmp_nuxM_nuxM;
 	float *stat; // convergence statistics
+	//float *eig_V;
+	//float *eig_d;
+	//float *eig_e;
 	int *use_hess_fact;
 	void *lq_work0;
 	float qp_res[4]; // infinity norm of residuals
+	float preg_last;
 	int iter; // iteration number
 	int stat_max; // iterations saved in stat
 	int stat_m; // number of recorded stat per IPM iter
 	int use_Pb;
 	int status; // solver status
-	int square_root_alg; // cache from arg
+	//int square_root_alg; // cache from arg XXX not needed any more since ws won't depend on it
+	int last_square_root_alg; // actual square root alg at last iter
 	int lq_fact; // cache from arg
+	int last_lq_fact; // actual lq fact at last iter
 	int mask_constr; // use constr mask
 	int valid_ric_vec; // meaningful riccati vectors
 	int valid_ric_p; // form of riccati p: 0 p*inv(L), 1 p
+	int npd_reg_hess; // at last iter, hessian has been regularized to get positive (semi) definite
+	int npd_hess; // can be used to signal that hessian has been found to be not positive definite
 	hpipm_size_t memsize;
 	};
 
@@ -159,8 +174,10 @@ void s_ocp_qp_ipm_arg_set_tol_eq(float *tol_eq, struct s_ocp_qp_ipm_arg *arg);
 void s_ocp_qp_ipm_arg_set_tol_ineq(float *tol_ineq, struct s_ocp_qp_ipm_arg *arg);
 // set exit tolerance on complementarity condition
 void s_ocp_qp_ipm_arg_set_tol_comp(float *tol_comp, struct s_ocp_qp_ipm_arg *arg);
+// set exit tolerance on dual gap
+void s_ocp_qp_ipm_arg_set_tol_dual_gap(float *tol_dual_gap, struct s_ocp_qp_ipm_arg *arg);
 // set regularization of primal variables
-void s_ocp_qp_ipm_arg_set_reg_prim(float *tol_comp, struct s_ocp_qp_ipm_arg *arg);
+void s_ocp_qp_ipm_arg_set_reg_prim(float *reg_prim, struct s_ocp_qp_ipm_arg *arg);
 // set warm start: 0 no warm start, 1 primal var
 void s_ocp_qp_ipm_arg_set_warm_start(int *warm_start, struct s_ocp_qp_ipm_arg *arg);
 // Mehrotra's predictor-corrector IPM algorithm: 0 no predictor-corrector, 1 use predictor-corrector
@@ -181,12 +198,30 @@ void s_ocp_qp_ipm_arg_set_lam_min(float *value, struct s_ocp_qp_ipm_arg *arg);
 void s_ocp_qp_ipm_arg_set_t_min(float *value, struct s_ocp_qp_ipm_arg *arg);
 // min value of tau in the solution
 void s_ocp_qp_ipm_arg_set_tau_min(float *value, struct s_ocp_qp_ipm_arg *arg);
+// min value of lam in the hot start initialization
+void s_ocp_qp_ipm_arg_set_lam0_min(float *value, struct s_ocp_qp_ipm_arg *arg);
+// min value of t in the hot start initialization
+void s_ocp_qp_ipm_arg_set_t0_min(float *value, struct s_ocp_qp_ipm_arg *arg);
 // set split step: 0 same step, 1 different step for primal and dual variables
 void s_ocp_qp_ipm_arg_set_split_step(int *value, struct s_ocp_qp_ipm_arg *arg);
+// in [0,1], for m>0 it trades off aggressive step sizes with robustness for any starting point
+void s_ocp_qp_ipm_arg_set_m_safe(float *value, struct s_ocp_qp_ipm_arg *arg);
 // variables initialization scheme
 void s_ocp_qp_ipm_arg_set_var_init_scheme(int *value, struct s_ocp_qp_ipm_arg *arg);
 // clip t and lam: 0 no, 1 in Gamma computation, 2 in solution
 void s_ocp_qp_ipm_arg_set_t_lam_min(int *value, struct s_ocp_qp_ipm_arg *arg);
+// initialization scheme of lambda and t slacks: 0 sqrt(mu0), 1 1.0, 2 heuristic for primal feasibility
+void s_ocp_qp_ipm_arg_set_t0_init(int *value, struct s_ocp_qp_ipm_arg *arg);
+// provide an updated factorization on exit (e.g. for use in sensitivity and feedback computation)
+void s_ocp_qp_ipm_arg_set_update_fact_exit(int *value, struct s_ocp_qp_ipm_arg *arg);
+//
+void s_ocp_qp_ipm_arg_get(char *field, struct s_ocp_qp_ipm_arg *arg, void *value);
+//
+void s_ocp_qp_ipm_arg_get_lam0_min(struct s_ocp_qp_ipm_arg *arg, float *value);
+//
+void s_ocp_qp_ipm_arg_get_t0_min(struct s_ocp_qp_ipm_arg *arg, float *value);
+//
+void s_ocp_qp_ipm_arg_deepcopy(struct s_ocp_qp_ipm_arg *arg_s, struct s_ocp_qp_ipm_arg *arg_d);
 
 //
 hpipm_size_t s_ocp_qp_ipm_ws_strsize();
@@ -208,6 +243,12 @@ void s_ocp_qp_ipm_get_max_res_eq(struct s_ocp_qp_ipm_ws *ws, float *res_eq);
 void s_ocp_qp_ipm_get_max_res_ineq(struct s_ocp_qp_ipm_ws *ws, float *res_ineq);
 //
 void s_ocp_qp_ipm_get_max_res_comp(struct s_ocp_qp_ipm_ws *ws, float *res_comp);
+//
+void s_ocp_qp_ipm_get_dual_gap(struct s_ocp_qp_ipm_ws *ws, float *dual_gap);
+//
+void s_ocp_qp_ipm_get_obj(struct s_ocp_qp_ipm_ws *ws, float *obj);
+//
+void s_ocp_qp_ipm_get_tau_iter(struct s_ocp_qp_ipm_ws *ws, float *tau_iter);
 //
 void s_ocp_qp_ipm_get_stat(struct s_ocp_qp_ipm_ws *ws, float **stat);
 //
@@ -236,8 +277,10 @@ void s_ocp_qp_ipm_delta_step(int kk, struct s_ocp_qp *qp, struct s_ocp_qp_sol *q
 void s_ocp_qp_ipm_solve(struct s_ocp_qp *qp, struct s_ocp_qp_sol *qp_sol, struct s_ocp_qp_ipm_arg *arg, struct s_ocp_qp_ipm_ws *ws);
 //
 void s_ocp_qp_ipm_predict(struct s_ocp_qp *qp, struct s_ocp_qp_sol *qp_sol, struct s_ocp_qp_ipm_arg *arg, struct s_ocp_qp_ipm_ws *ws);
-//
-void s_ocp_qp_ipm_sens(struct s_ocp_qp *qp, struct s_ocp_qp_sol *qp_sol, struct s_ocp_qp_ipm_arg *arg, struct s_ocp_qp_ipm_ws *ws);
+// forward solution sensitivities
+void s_ocp_qp_ipm_sens_frw(struct s_ocp_qp *qp, struct s_ocp_qp_seed *seed, struct s_ocp_qp_sol *sens, struct s_ocp_qp_ipm_arg *arg, struct s_ocp_qp_ipm_ws *ws);
+// adjoint solution sensitivities
+void s_ocp_qp_ipm_sens_adj(struct s_ocp_qp *qp, struct s_ocp_qp_seed *seed, struct s_ocp_qp_sol *sens, struct s_ocp_qp_ipm_arg *arg, struct s_ocp_qp_ipm_ws *ws);
 
 
 
