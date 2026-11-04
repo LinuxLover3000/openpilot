@@ -192,3 +192,31 @@ scons -j"$(nproc)"
 The acados build downloads its pinned source revision and requires CMake,
 Make, a C/C++ compiler, and Cargo for its template renderer. The rebuilt
 library is architecture-specific (`x86_64`, `larch64`, or `Darwin`).
+
+### Updating acados
+
+The MPC generators and the vendored `acados_template` Python package are a
+single compatibility unit. Do not merge a generator API change by itself:
+`scons` regenerates MPC code from the committed
+`third_party/acados/acados_template`, so an integration/template mismatch
+fails every CI job that builds openpilot.
+
+After changing `third_party/acados/build.sh`, an acados pin, or MPC generator
+code, run the **vendor acados** Actions workflow for the branch. It builds the
+native `x86_64`, `larch64`, and `Darwin` artifacts and opens a separate vendor
+pull request containing the matching headers, template, renderer, libraries,
+and `lib/link_libs.json`. Merge that vendor pull request before relying on
+ordinary build or test CI.
+
+For a local update, rebuild the host artifacts and then build from the
+generated vendor tree:
+
+```bash
+./third_party/acados/build.sh
+scons -j"$(nproc)"
+```
+
+Before committing, confirm the vendor update includes the generated
+`third_party/acados/include`, `acados_template`, `x86_64`, `larch64`,
+`Darwin`, and `lib/link_libs.json` paths. A successful local build with
+uncommitted generated files does not validate a clean CI checkout.

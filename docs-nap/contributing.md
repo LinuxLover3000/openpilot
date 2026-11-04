@@ -40,6 +40,31 @@ docker build -t nap-ci -f Dockerfile.openpilot .
 docker run --rm nap-ci bash -c "source .venv/bin/activate && scons -j\$(nproc)"
 ```
 
+## CI validation
+
+The `tests` workflow independently runs static analysis, a stripped release
+build, a macOS build, unit tests, process replay, and the UI-report build.
+All build-oriented jobs run `scons`, so a failure in MPC code generation blocks
+several checks at once. Run the smallest matching validation locally, then use
+the pull-request checks for the full matrix:
+
+```bash
+# Static analysis
+scripts/lint/lint.sh
+
+# Native/Cython build used by unit, replay, and UI-report jobs
+scons -j"$(nproc)"
+
+# Unit tests (requires Xvfb; see local-development.md)
+source selfdrive/test/setup_xvfb.sh
+MAX_EXAMPLES=1 pytest --continue-on-collection-errors --durations=0 -n logical -m 'not slow'
+```
+
+For acados changes, see the update procedure in
+[`local-development.md`](local-development.md#updating-acados). The generated
+vendor contents must be committed with the generator integration; CI checks
+the committed tree, not a developer's locally regenerated artifacts.
+
 ## Pre-AP safety tests
 
 ```bash
@@ -54,9 +79,12 @@ Safety-critical code (`opendbc_repo/opendbc/safety/**`) must ship with test cove
 Before pushing to any `nap-*` branch:
 
 1. Local `scons` succeeds
-2. `pytest opendbc_repo/opendbc/safety/tests/test_tesla_preap.py` green
-3. If touching `safety/`, run the Docker CI build too
-4. If bumping `opendbc_repo`, confirm the submodule SHA has been pushed upstream
+2. `scripts/lint/lint.sh` succeeds
+3. `pytest opendbc_repo/opendbc/safety/tests/test_tesla_preap.py` green
+4. If touching `safety/`, run the Docker CI build too
+5. If changing acados, the matching generated vendor tree is included and its
+   vendor pull request has passed CI
+6. If bumping `opendbc_repo`, confirm the submodule SHA has been pushed upstream
 
 ## Release notes
 

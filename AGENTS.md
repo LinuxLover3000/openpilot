@@ -158,6 +158,15 @@ drive replay when changing process interactions, controls, CAN behavior, or RX
 rate expectations. Safety changes additionally require building the safety
 library and running the pre-AP safety tests; see `docs-nap/safety-model.md`.
 
+The MPC generators and vendored acados template must stay in lockstep. An
+acados pin or generator API update requires the generated
+`third_party/acados/include`, `acados_template`, architecture directories, and
+`lib/link_libs.json` to be updated together. `scons` regenerates MPC code from
+the committed template, so a locally successful build using uncommitted vendor
+output does not validate CI. Use the manual **vendor acados** workflow to
+produce the cross-architecture vendor pull request, merge it, then use the
+ordinary build/test checks.
+
 Development targets `nap-dev`. Keep sunnypilot-specific code out of
 `nap-dev`/`nap-alpha`; `naponsp-dev` is the dedicated branch. When changing
 `opendbc_repo`, push its commit before updating the main repository's
