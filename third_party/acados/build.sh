@@ -63,9 +63,9 @@ git fetch --all
 git checkout 51db6db146217e6624d7575f34e0421f28bc76a0 # acados main, 2026-10-29
 git submodule update --depth=1 --recursive --init
 
-# BLASFEO 0a3df86 moves its generated target header out of the source tree
-# without updating the ARM kernels' relative include paths.
-BLASFEO_COMMIT=6b182bd8c6b5358a8eadc0604dc7b830d39028b1
+# BLASFEO master includes the ARM CMake target-header path fix from issue #224.
+# Remove this when acados updates blasfeo on main.
+BLASFEO_COMMIT=38f790e2d49bfe3321da78ab5eefcaf37c7e1ead
 git -C "$DIR/acados_repo/external/blasfeo" fetch --depth=1 origin "$BLASFEO_COMMIT"
 git -C "$DIR/acados_repo/external/blasfeo" checkout "$BLASFEO_COMMIT"
 
