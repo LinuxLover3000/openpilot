@@ -8,7 +8,7 @@
 import os
 import warnings, inspect
 
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 from .utils import check_if_nparray_and_flatten, use_int_or_cast_to_1d_nparray
 
 INTEGRATOR_TYPES = ('ERK', 'ERK_WITH_COST', 'IRK', 'GNSF', 'DISCRETE', 'LIFTED_IRK')

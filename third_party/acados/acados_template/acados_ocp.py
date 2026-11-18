@@ -13,7 +13,7 @@ from copy import deepcopy
 
 import casadi as ca
 import os, shutil, hashlib, json, warnings
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 
 from .acados_model import AcadosModel
 from .acados_ocp_cost import AcadosOcpCost

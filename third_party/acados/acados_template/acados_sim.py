@@ -10,7 +10,7 @@ import os, json, hashlib, warnings
 import numpy as np
 from typing import Optional, TYPE_CHECKING
 from copy import deepcopy
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 import casadi as ca
 from .acados_model import AcadosModel
 from .acados_dims import AcadosSimDims
