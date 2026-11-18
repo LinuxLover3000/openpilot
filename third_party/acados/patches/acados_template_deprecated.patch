@@ -1,0 +1,148 @@
+diff --git a/third_party/acados/acados_template/_deprecated.py b/third_party/acados/acados_template/_deprecated.py
+new file mode 100644
+index 000000000..f16f9a8bd
+--- /dev/null
++++ b/third_party/acados/acados_template/_deprecated.py
+@@ -0,0 +1,25 @@
++from __future__ import annotations
++
++import functools
++import warnings
++from collections.abc import Callable
++
++
++def deprecated(*, version: str | None = None, reason: str | None = None) -> Callable:
++  details = "This API is deprecated."
++  if version and reason:
++    details = f"This API is deprecated since {version}: {reason}"
++  elif version:
++    details = f"This API is deprecated since {version}."
++  elif reason:
++    details = f"This API is deprecated: {reason}"
++
++  def decorate(fn: Callable) -> Callable:
++    @functools.wraps(fn)
++    def wrapped(*args, **kwargs):
++      warnings.warn(details, DeprecationWarning, stacklevel=2)
++      return fn(*args, **kwargs)
++
++    return wrapped
++
++  return decorate
+diff --git a/third_party/acados/acados_template/acados_casadi_ocp_solver.py b/third_party/acados/acados_template/acados_casadi_ocp_solver.py
+index 6354d592e..090ac2f78 100644
+--- a/third_party/acados/acados_template/acados_casadi_ocp_solver.py
++++ b/third_party/acados/acados_template/acados_casadi_ocp_solver.py
+@@ -6,7 +6,7 @@
+ # Licensed under the 2-Clause BSD License.
+ 
+ from typing import Union, Optional, List
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ import casadi as ca
+ import numpy as np
+ 
+diff --git a/third_party/acados/acados_template/acados_dims.py b/third_party/acados/acados_template/acados_dims.py
+index 7883ac305..bf60adf68 100644
+--- a/third_party/acados/acados_template/acados_dims.py
++++ b/third_party/acados/acados_template/acados_dims.py
+@@ -5,7 +5,7 @@
+ #
+ # Licensed under the 2-Clause BSD License.
+ 
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ import warnings, inspect
+ 
+ def check_int_value(name, value, *, positive=False, nonnegative=False):
+diff --git a/third_party/acados/acados_template/acados_multiphase_ocp.py b/third_party/acados/acados_template/acados_multiphase_ocp.py
+index 8b4def3b7..e2fdba73c 100644
+--- a/third_party/acados/acados_template/acados_multiphase_ocp.py
++++ b/third_party/acados/acados_template/acados_multiphase_ocp.py
+@@ -9,7 +9,7 @@ from typing import Union, List, Optional
+ import numpy as np
+ import casadi as ca
+ from copy import deepcopy
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ 
+ import os, json, warnings, inspect, hashlib
+ 
+diff --git a/third_party/acados/acados_template/acados_ocp.py b/third_party/acados/acados_template/acados_ocp.py
+index 505306f29..da4387880 100644
+--- a/third_party/acados/acados_template/acados_ocp.py
++++ b/third_party/acados/acados_template/acados_ocp.py
+@@ -13,7 +13,7 @@ from copy import deepcopy
+ 
+ import casadi as ca
+ import os, shutil, hashlib, json, warnings
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ 
+ from .acados_model import AcadosModel
+ from .acados_ocp_cost import AcadosOcpCost
+diff --git a/third_party/acados/acados_template/acados_ocp_batch_solver.py b/third_party/acados/acados_template/acados_ocp_batch_solver.py
+index ab21e32bb..a30c1c2d3 100644
+--- a/third_party/acados/acados_template/acados_ocp_batch_solver.py
++++ b/third_party/acados/acados_template/acados_ocp_batch_solver.py
+@@ -13,7 +13,7 @@ from ctypes import (POINTER, c_int, c_void_p, cast, c_double, c_char_p)
+ import numpy as np
+ import time
+ import warnings
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ 
+ 
+ class AcadosOcpBatchSolver():
+diff --git a/third_party/acados/acados_template/acados_ocp_options.py b/third_party/acados/acados_template/acados_ocp_options.py
+index e7284335d..79033e94a 100644
+--- a/third_party/acados/acados_template/acados_ocp_options.py
++++ b/third_party/acados/acados_template/acados_ocp_options.py
+@@ -8,7 +8,7 @@
+ import os
+ import warnings, inspect
+ 
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ from .utils import check_if_nparray_and_flatten, use_int_or_cast_to_1d_nparray
+ 
+ INTEGRATOR_TYPES = ('ERK', 'ERK_WITH_COST', 'IRK', 'GNSF', 'DISCRETE', 'LIFTED_IRK')
+diff --git a/third_party/acados/acados_template/acados_ocp_solver.py b/third_party/acados/acados_template/acados_ocp_solver.py
+index 2413727f3..d5b0168a7 100644
+--- a/third_party/acados/acados_template/acados_ocp_solver.py
++++ b/third_party/acados/acados_template/acados_ocp_solver.py
+@@ -25,7 +25,7 @@ from typing import Union, Optional, List, Tuple, Sequence, Dict
+ 
+ import numpy as np
+ import scipy.linalg
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ from .builders import CMakeBuilder
+ from .acados_ocp import AcadosOcp
+ from .acados_multiphase_ocp import AcadosMultiphaseOcp
+diff --git a/third_party/acados/acados_template/acados_sim.py b/third_party/acados/acados_template/acados_sim.py
+index 663e471ec..8c9a45f31 100644
+--- a/third_party/acados/acados_template/acados_sim.py
++++ b/third_party/acados/acados_template/acados_sim.py
+@@ -10,7 +10,7 @@ import os, json, hashlib, warnings
+ import numpy as np
+ from typing import Optional, TYPE_CHECKING
+ from copy import deepcopy
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ import casadi as ca
+ from .acados_model import AcadosModel
+ from .acados_dims import AcadosSimDims
+diff --git a/third_party/acados/acados_template/acados_sim_solver.py b/third_party/acados/acados_template/acados_sim_solver.py
+index e236ff734..93fcdeb6f 100644
+--- a/third_party/acados/acados_template/acados_sim_solver.py
++++ b/third_party/acados/acados_template/acados_sim_solver.py
+@@ -11,7 +11,7 @@ import os
+ import sys
+ import warnings
+ import time
+-from deprecated.sphinx import deprecated
++from ._deprecated import deprecated
+ from ctypes import (POINTER, byref, c_bool, c_char_p, c_double, c_int,
+                     c_void_p, cast)
+ if os.name == 'nt':

@@ -99,6 +99,7 @@ rm -rf $DIR/include $DIR/acados_template
 cp -r $DIR/acados_repo/include $DIR
 cp -r $DIR/acados_repo/lib $INSTALL_DIR
 cp -r $DIR/acados_repo/interfaces/acados_template/acados_template $DIR/
+git -C "$DIR/../.." apply "$DIR/patches/acados_template_deprecated.patch"
 mkdir -p $DIR/lib
 cp $DIR/acados_repo/lib/link_libs.json $DIR/lib/
 #pip3 install -e $DIR/acados/interfaces/acados_template

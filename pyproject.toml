@@ -65,7 +65,6 @@ dependencies = [
   "qrcode",
   "jeepney",
   "pillow",
-  "deprecated>=3.0.0",
   "scipy>=1.18.1",
 ]
 
