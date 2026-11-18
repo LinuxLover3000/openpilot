@@ -9,7 +9,7 @@ from typing import Union, List, Optional
 import numpy as np
 import casadi as ca
 from copy import deepcopy
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 
 import os, json, warnings, inspect, hashlib
 

@@ -6,7 +6,7 @@
 # Licensed under the 2-Clause BSD License.
 
 from typing import Union, Optional, List
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 import casadi as ca
 import numpy as np
 

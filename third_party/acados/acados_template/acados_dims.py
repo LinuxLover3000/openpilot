@@ -5,7 +5,7 @@
 #
 # Licensed under the 2-Clause BSD License.
 
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 import warnings, inspect
 
 def check_int_value(name, value, *, positive=False, nonnegative=False):

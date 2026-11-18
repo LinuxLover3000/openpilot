@@ -11,7 +11,7 @@ import os
 import sys
 import warnings
 import time
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 from ctypes import (POINTER, byref, c_bool, c_char_p, c_double, c_int,
                     c_void_p, cast)
 if os.name == 'nt':

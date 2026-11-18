@@ -25,7 +25,7 @@ from typing import Union, Optional, List, Tuple, Sequence, Dict
 
 import numpy as np
 import scipy.linalg
-from deprecated.sphinx import deprecated
+from ._deprecated import deprecated
 from .builders import CMakeBuilder
 from .acados_ocp import AcadosOcp
 from .acados_multiphase_ocp import AcadosMultiphaseOcp
