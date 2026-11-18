@@ -69,11 +69,6 @@ function launch {
   ln -sfn $(pwd) /data/pythonpath
   export PYTHONPATH="$PWD"
 
-  # Use the project environment so dependencies installed by setup are available.
-  if [ -f "$DIR/.venv/bin/activate" ]; then
-    source "$DIR/.venv/bin/activate"
-  fi
-
   # hardware specific init
   if [ -f /AGNOS ]; then
     agnos_init
