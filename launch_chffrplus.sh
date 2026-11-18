@@ -69,11 +69,10 @@ function launch {
   ln -sfn $(pwd) /data/pythonpath
   export PYTHONPATH="$PWD"
 
-  if [ ! -f "$DIR/.venv/bin/activate" ]; then
-    echo "Missing project Python environment: $DIR/.venv"
-    exit 1
+  # Use the project environment so dependencies installed by setup are available.
+  if [ -f "$DIR/.venv/bin/activate" ]; then
+    source "$DIR/.venv/bin/activate"
   fi
-  source "$DIR/.venv/bin/activate"
 
   # hardware specific init
   if [ -f /AGNOS ]; then

@@ -1,6 +1,4 @@
 import contextlib
-
-from openpilot.system.updated import updated
 from openpilot.system.updated.tests.test_base import ParamsBaseUpdateTest, run, update_release
 
 
@@ -21,9 +19,4 @@ class TestUpdateDGitStrategy(ParamsBaseUpdateTest):
 
   @contextlib.contextmanager
   def additional_context(self):
-    sync_python_environment = updated.sync_python_environment
-    updated.sync_python_environment = lambda: None
-    try:
-      yield
-    finally:
-      updated.sync_python_environment = sync_python_environment
+    yield
