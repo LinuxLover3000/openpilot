@@ -226,6 +226,21 @@ def handle_agnos_update() -> None:
   set_offroad_alert("Offroad_NeosUpdate", False)
 
 
+def sync_python_environment() -> None:
+  uv = shutil.which("uv")
+  if uv is None:
+    user_uv = Path.home() / ".local" / "bin" / "uv"
+    if user_uv.is_file() and os.access(user_uv, os.X_OK):
+      uv = str(user_uv)
+
+  if uv is None:
+    raise RuntimeError("uv is required to provision the updated Python environment")
+
+  cloudlog.info("syncing Python environment for updated openpilot")
+  output = run([uv, "sync", "--frozen", "--all-extras"], OVERLAY_MERGED)
+  cloudlog.info("Python environment sync success: %s", output)
+
+
 
 class Updater:
   def __init__(self):
@@ -400,6 +415,8 @@ class Updater:
     ]
     r = [run(cmd, OVERLAY_MERGED) for cmd in cmds]
     cloudlog.info("git reset success: %s", '\n'.join(r))
+
+    sync_python_environment()
 
     # TODO: show agnos download progress
     if AGNOS:
