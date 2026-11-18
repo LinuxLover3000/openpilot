@@ -85,6 +85,20 @@ Before pushing to any `nap-*` branch:
 5. If changing acados, the matching generated vendor tree is included and its
    vendor pull request has passed CI
 6. If bumping `opendbc_repo`, confirm the submodule SHA has been pushed upstream
+7. If adding/changing Python dependencies, confirm boot-critical imports remain
+   safe after factory reset with no internet access
+
+## Dependency change checklist (boot/update safety)
+
+When adding a new Python dependency or import, answer all of the following in
+the PR:
+
+1. Is the import used in a boot-critical path (manager startup or modules it
+   imports before offroad UI/alerts are running)?
+2. If yes, what guarantees availability after factory reset and offline boot?
+   (vendored/local fallback, or proven base-image/update provisioning)
+3. If no guarantee exists, move the import out of the boot-critical path or
+   vendor/provision it before merge.
 
 ## Release notes
 

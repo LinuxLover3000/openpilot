@@ -67,3 +67,19 @@ Any divergence causes the steering angle command limiter to disagree between lay
 NAP tracks upstream openpilot closely. We fork `opendbc` because the pre-AP DBCs, car port, and safety mode all live there and are NAP-only. We track upstream `panda` directly — pre-AP safety changes go through the `opendbc_repo/opendbc/safety/` path that panda pulls in as a submodule.
 
 See [Tinkla](https://github.com/boggyver/openpilot/tree/tesla_unity_betaC3) and [xnor-tech/openpilot](https://github.com/xnor-tech/openpilot) for the prior art NAP builds on.
+
+## Runtime dependency model (important for update safety)
+
+`pyproject.toml` and `uv.lock` define development/CI dependency resolution, but
+device startup safety depends on what is already provisioned in the runtime
+environment at boot. Do not assume that adding a Python dependency is safe for
+factory-reset or offline devices unless the dependency is guaranteed available
+without network during first boot after update.
+
+For boot-critical paths (manager startup and imports required before UI/offroad
+alerts are active), prefer one of:
+
+- vendored/local implementation in the repository,
+- dependency provisioning guaranteed by base image/update pipeline before swap.
+
+Never rely on a new internet download at boot to make startup imports succeed.

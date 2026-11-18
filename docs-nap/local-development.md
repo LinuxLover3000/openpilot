@@ -201,6 +201,12 @@ single compatibility unit. Do not merge a generator API change by itself:
 `third_party/acados/acados_template`, so an integration/template mismatch
 fails every CI job that builds openpilot.
 
+Treat `third_party/acados/acados_template` as generated vendor output. Do not
+hand-edit files there. Keep durable changes in the acados vendoring pipeline
+(`third_party/acados/build.sh` and helper scripts it calls, such as
+`third_party/acados/patch_acados_template.py`) and regenerate the vendor tree.
+Direct edits in `acados_template` are overwritten by the next vendor rebuild.
+
 After changing `third_party/acados/build.sh`, an acados pin, or MPC generator
 code, run the **vendor acados** Actions workflow for the branch. It builds the
 native `x86_64`, `larch64`, and `Darwin` artifacts and opens a separate vendor
