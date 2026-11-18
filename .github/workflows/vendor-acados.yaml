@@ -28,7 +28,7 @@ jobs:
           - target: larch64
             runner: ubuntu-24.04-arm
           - target: Darwin
-            runner: macos-14
+            runner: macos-15
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Validate source branch
