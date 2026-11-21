@@ -8,7 +8,6 @@
 from typing import Optional, Union
 import numpy as np
 
-from scipy.linalg import block_diag
 from copy import deepcopy
 
 import casadi as ca
@@ -2063,7 +2062,13 @@ class AcadosOcp:
 
         if cost_type == "NONLINEAR_LS":
             current_W = getattr(self.cost, W_attr)
-            setattr(self.cost, W_attr, block_diag(current_W, weight))
+            weight = np.atleast_2d(weight)
+            new_W = np.zeros((current_W.shape[0] + weight.shape[0],
+                              current_W.shape[1] + weight.shape[1]),
+                             dtype=np.result_type(current_W, weight))
+            new_W[:current_W.shape[0], :current_W.shape[1]] = current_W
+            new_W[current_W.shape[0]:, current_W.shape[1]:] = weight
+            setattr(self.cost, W_attr, new_W)
 
         elif cost_type == "CONVEX_OVER_NONLINEAR":
             new_residual = casadi_symbol(residual_name, constr_expr.shape)
