@@ -1,0 +1,48 @@
+--- a/third_party/acados/acados_template/acados_ocp.py
++++ b/third_party/acados/acados_template/acados_ocp.py
+@@ -8,7 +8,6 @@
+ from typing import Optional, Union
+ import numpy as np
+ 
+-from scipy.linalg import block_diag
+ from copy import deepcopy
+ 
+ import casadi as ca
+@@ -2063,7 +2062,13 @@
+ 
+         if cost_type == "NONLINEAR_LS":
+             current_W = getattr(self.cost, W_attr)
+-            setattr(self.cost, W_attr, block_diag(current_W, weight))
++            weight = np.atleast_2d(weight)
++            new_W = np.zeros((current_W.shape[0] + weight.shape[0],
++                              current_W.shape[1] + weight.shape[1]),
++                             dtype=np.result_type(current_W, weight))
++            new_W[:current_W.shape[0], :current_W.shape[1]] = current_W
++            new_W[current_W.shape[0]:, current_W.shape[1]:] = weight
++            setattr(self.cost, W_attr, new_W)
+ 
+         elif cost_type == "CONVEX_OVER_NONLINEAR":
+             new_residual = casadi_symbol(residual_name, constr_expr.shape)
+--- a/third_party/acados/acados_template/acados_ocp_solver.py
++++ b/third_party/acados/acados_template/acados_ocp_solver.py
+@@ -24,7 +24,6 @@
+ from typing import Union, Optional, List, Tuple, Sequence, Dict
+ 
+ import numpy as np
+-import scipy.linalg
+ from ._deprecated import deprecated
+ from .builders import CMakeBuilder
+ from .acados_ocp import AcadosOcp
+@@ -2226,8 +2225,11 @@
+         Q_mat = self.get_from_qp_in(stage, 'Q')
+         R_mat = self.get_from_qp_in(stage, 'R')
+         S_mat = self.get_from_qp_in(stage, 'S')
+-        hess_block = scipy.linalg.block_diag(R_mat, Q_mat)
+         nu = R_mat.shape[0]
++        hess_block = np.zeros((nu + Q_mat.shape[0], nu + Q_mat.shape[1]),
++                              dtype=np.result_type(R_mat, Q_mat, S_mat))
++        hess_block[:nu, :nu] = R_mat
++        hess_block[nu:, nu:] = Q_mat
+         hess_block[nu:, :nu] = S_mat.T
+         hess_block[:nu, nu:] = S_mat
+         return hess_block

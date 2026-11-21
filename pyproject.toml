@@ -65,7 +65,6 @@ dependencies = [
   "qrcode",
   "jeepney",
   "pillow",
-  "scipy>=1.18.1",
 ]
 
 [project.optional-dependencies]
